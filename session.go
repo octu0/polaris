@@ -3,6 +3,8 @@ package polaris
 import (
 	"context"
 	"iter"
+	"log"
+	"os"
 	"sync"
 
 	"cloud.google.com/go/vertexai/genai"
@@ -12,6 +14,88 @@ import (
 type Session interface {
 	SendText(...string) (iter.Seq2[string, error], error)
 	Close() error
+}
+
+func createSession(ctx context.Context, tc toolConn, rc remoteCall, options ...UseOptionFunc) (Session, error) {
+	opt := &UseOption{
+		Model:           "gemini-2.5-pro-preview-03-25",
+		UseLocalTool:    false,
+		Temperature:     0.2,
+		TopP:            0.95,
+		MaxOutputTokens: 8192,
+	}
+	for _, f := range options {
+		f(opt)
+	}
+	logger := opt.Logger
+	if logger == nil {
+		logger = &stdLogger{
+			log.New(os.Stdout, "polaris ", log.LstdFlags),
+			opt.DebugMode,
+		}
+	}
+	rc.setLogger(logger)
+
+	if opt.DefaultArgsFunc != nil {
+		rc.setDefaultArgsFunc(opt.DefaultArgsFunc)
+	}
+
+	remoteTools, err := tc.listTools(opt.UseLocalTool)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	functionDeclarations := make([]*genai.FunctionDeclaration, len(remoteTools))
+	functionNames := make([]string, len(remoteTools))
+	for i, rt := range remoteTools {
+		if _, ok := rt.Parameters.Properties["_error"]; ok != true {
+			rt.Parameters.Properties["_error"] = &genai.Schema{
+				Type:        genai.TypeString,
+				Description: "error message of called function",
+				Nullable:    true,
+			}
+		}
+		functionDeclarations[i] = &genai.FunctionDeclaration{
+			Name:        rt.Name,
+			Description: rt.Description,
+			Parameters:  rt.Parameters,
+			Response:    rt.Response,
+		}
+		functionNames[i] = rt.Name
+	}
+
+	client, err := geminiClient(ctx)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	model := client.GenerativeModel(opt.Model)
+	model.Temperature = genai.Ptr(opt.Temperature)
+	model.TopP = genai.Ptr(opt.TopP)
+	model.MaxOutputTokens = genai.Ptr(opt.MaxOutputTokens)
+
+	if opt.JSONOutput {
+		model.ResponseMIMEType = "application/json"
+		model.ResponseSchema = opt.OutputSchema.Schema()
+	}
+	if 0 < len(opt.SystemInstructions) {
+		model.SystemInstruction = &genai.Content{
+			Parts: opt.SystemInstructions,
+		}
+	}
+	// JSONOutput && Tools = does not support
+	if 0 < len(functionDeclarations) && opt.JSONOutput != true {
+		model.Tools = []*genai.Tool{{
+			FunctionDeclarations: functionDeclarations,
+		}}
+		model.ToolConfig = &genai.ToolConfig{
+			FunctionCallingConfig: &genai.FunctionCallingConfig{
+				Mode: genai.FunctionCallingAuto,
+				//AllowedFunctionNames: functionNames,
+			},
+		}
+	}
+
+	return &LiveSession{ctx, logger, rc, client, model.StartChat()}, nil
 }
 
 type remoteCall interface {
