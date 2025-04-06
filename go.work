@@ -1,0 +1,8 @@
+go 1.23.7
+
+use (
+    ./
+    ./_example/multi-tool
+    ./_example/json-schema
+    ./_example/remote-log
+)
