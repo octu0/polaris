@@ -113,6 +113,7 @@ type UseOption struct {
 	OutputSchema       TypeDef
 	Logger             Logger
 	DebugMode          bool
+	DefaultArgsFunc    func() map[string]any
 }
 
 func UseModel(name string) UseOptionFunc {
@@ -191,6 +192,12 @@ func UseLogger(lg Logger) UseOptionFunc {
 func UseDebugMode(enable bool) UseOptionFunc {
 	return func(o *UseOption) {
 		o.DebugMode = enable
+	}
+}
+
+func UseDefaultArgs(fn func() map[string]any) UseOptionFunc {
+	return func(o *UseOption) {
+		o.DefaultArgsFunc = fn
 	}
 }
 
@@ -338,7 +345,8 @@ func (c *Conn) listTools(useLocalTool bool) ([]genai.FunctionDeclaration, error)
 }
 
 func (c *Conn) Use(ctx context.Context, options ...UseOptionFunc) (Session, error) {
-	return createSession(ctx, c, c, options...)
+	rc := &defaultRemoteCall{c, nil, nil}
+	return createSession(ctx, c, rc, options...)
 }
 
 func (c *Conn) hasTool(d genai.FunctionDeclaration) bool {
@@ -390,21 +398,6 @@ func (c *Conn) toolKeepAliveLoop(ctx context.Context) {
 	}
 }
 
-func (c *Conn) callFunction(name string, args map[string]any) (map[string]any, error) {
-	c.logger.DebugF("callFunction: %s args=%v", name, args)
-	resp, err := requestWithData(
-		c,
-		tooltopic(name),
-		JSONEncoder[map[string]any](),
-		JSONEncoder[map[string]any](),
-		args,
-	)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	return resp, nil
-}
-
 func newConn(opt *ConnectOption, nc *nats.Conn) *Conn {
 	ctx, cancel := context.WithCancel(context.Background())
 	c := &Conn{
@@ -454,6 +447,11 @@ func createSession(ctx context.Context, tc toolConn, rc remoteCall, options ...U
 			log.New(os.Stdout, " polaris", log.LstdFlags),
 			opt.DebugMode,
 		}
+	}
+	rc.setLogger(logger)
+
+	if opt.DefaultArgsFunc != nil {
+		rc.setDefaultArgsFunc(opt.DefaultArgsFunc)
 	}
 
 	remoteTools, err := tc.listTools(opt.UseLocalTool)
