@@ -464,6 +464,13 @@ func createSession(ctx context.Context, tc toolConn, rc remoteCall, options ...U
 	functionDeclarations := make([]*genai.FunctionDeclaration, len(remoteTools))
 	functionNames := make([]string, len(remoteTools))
 	for i, rt := range remoteTools {
+		if _, ok := rt.Parameters.Properties["_error"]; ok != true {
+			rt.Parameters.Properties["_error"] = &genai.Schema{
+				Type:        genai.TypeString,
+				Description: "error message of called function",
+				Nullable:    true,
+			}
+		}
 		functionDeclarations[i] = &genai.FunctionDeclaration{
 			Name:        rt.Name,
 			Description: rt.Description,
@@ -517,7 +524,7 @@ func handleToolCall(t Tool) func(map[string]any) map[string]any {
 		ctx := Ctx{j, t.Parameters, &resp}
 		if err := t.Handler(&ctx); err != nil {
 			return map[string]any{
-				"error": err.Error(),
+				"_error": err.Error(),
 			}
 		}
 		return resp.ToMap()
