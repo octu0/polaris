@@ -525,7 +525,7 @@ func handleToolCall(t Tool) func(map[string]any) map[string]any {
 }
 
 func tooltopic(name string) string {
-	return fmt.Sprintf("user-func:%s", name)
+	return fmt.Sprintf("polaris:user-func:%s", name)
 }
 
 func request[Resp any](c *Conn, topic string, encResp Encoder[Resp]) (Resp, error) {
