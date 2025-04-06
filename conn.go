@@ -408,7 +408,7 @@ func newConn(opt *ConnectOption, nc *nats.Conn) *Conn {
 		subs:   make([]*nats.Subscription, 0),
 		tools:  make([]Tool, 0),
 		logger: &stdLogger{
-			log.New(os.Stdout, " polaris", log.LstdFlags),
+			log.New(os.Stdout, "polaris ", log.LstdFlags),
 			false,
 		},
 	}
@@ -444,7 +444,7 @@ func createSession(ctx context.Context, tc toolConn, rc remoteCall, options ...U
 	logger := opt.Logger
 	if logger == nil {
 		logger = &stdLogger{
-			log.New(os.Stdout, " polaris", log.LstdFlags),
+			log.New(os.Stdout, "polaris ", log.LstdFlags),
 			opt.DebugMode,
 		}
 	}
