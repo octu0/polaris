@@ -37,55 +37,55 @@ Defining the structure (Schema) for your functions is significantly easier with 
 
 ```go
 FunctionDeclarations: []*genai.FunctionDeclaration{
-	{
-		Name:        "FuncName",
-		Description: "FuncDesc",
-		Parameters: &genai.Schema{
-			Type: genai.TypeObject,
-			Properties: map[string]*genai.Schema{
-				"param1": {
-					Type:        genai.TypeString,
-					Description: "desc param1",
-				},
-				"param2": {
-					Type:        genai.TypeInteger,
-					Description: "desc param2",
-				},
-				"param3": {
-					Type:        genai.TypeArray,
-					Description: "desc param3",
-					Items: &genai.Schema{
-						Type: genai.TypeObject,
-						Properties: map[string]*genai.Schema{
-							"param4": {
-								Type:        genai.TypeString,
-								Description: "desc param4",
-							},
-							"param5": {
-								Type:        genai.TypeBool,
-								Description: "desc param5",
-							},
-						},
-					},
-				},
-			},
-			Required: []string{"param1", "param2"},
-		},
-		Response: &genai.Schema{
-			Type: genai.TypeObject,
-			Properties: map[string]*genai.Schema{
-				"result1": {
-					Type: genai.TypeString,
-					Description: "result1",
-				},
-				"result2": {
-					Type: genai.TypeString,
-					Description: "result2",
-				},
-			},
-			Required: []string{"result1"},
-		},
-	},
+    {
+        Name:        "FuncName",
+        Description: "FuncDesc",
+        Parameters: &genai.Schema{
+            Type: genai.TypeObject,
+            Properties: map[string]*genai.Schema{
+                "param1": {
+                    Type:        genai.TypeString,
+                    Description: "desc param1",
+                },
+                "param2": {
+                    Type:        genai.TypeInteger,
+                    Description: "desc param2",
+                },
+                "param3": {
+                    Type:        genai.TypeArray,
+                    Description: "desc param3",
+                    Items: &genai.Schema{
+                        Type: genai.TypeObject,
+                        Properties: map[string]*genai.Schema{
+                            "param4": {
+                                Type:        genai.TypeString,
+                                Description: "desc param4",
+                            },
+                            "param5": {
+                                Type:        genai.TypeBool,
+                                Description: "desc param5",
+                            },
+                        },
+                    },
+                },
+            },
+            Required: []string{"param1", "param2"},
+        },
+        Response: &genai.Schema{
+            Type: genai.TypeObject,
+            Properties: map[string]*genai.Schema{
+                "result1": {
+                    Type: genai.TypeString,
+                    Description: "result1",
+                },
+                "result2": {
+                    Type: genai.TypeString,
+                    Description: "result2",
+                },
+            },
+            Required: []string{"result1"},
+        },
+    },
 }
 ```
 
@@ -94,27 +94,27 @@ FunctionDeclarations: []*genai.FunctionDeclaration{
 
 ```go
 tool := Tool{
-	Name:        "FuncName",
-	Description: "FuncDesc",
-	Parameters: Object{
-		Properties: Properties{
-			"param1": String{Description: "desc param1", Required: true},
-			"param2": Int{Description: "desc param2", Required: true},
-			"param3": ObjectArray{
-				Description: "desc param3",
-				Items: Properties{
-					"param4": String{Description: "desc param4"},
-					"param5": Bool{Description: "desc param5"},
-				},
-			},
-		},
-	},
-	Response: Object{
-		Properties: Properties{
-			"result1": String{Description: "result1", Required: true},
-			"result2": String{Description: "result2"},
-		},
-	},
+    Name:        "FuncName",
+    Description: "FuncDesc",
+    Parameters: Object{
+        Properties: Properties{
+            "param1": String{Description: "desc param1", Required: true},
+            "param2": Int{Description: "desc param2", Required: true},
+            "param3": ObjectArray{
+                Description: "desc param3",
+                Items: Properties{
+                    "param4": String{Description: "desc param4"},
+                    "param5": Bool{Description: "desc param5"},
+                },
+            },
+        },
+    },
+    Response: Object{
+        Properties: Properties{
+            "result1": String{Description: "result1", Required: true},
+            "result2": String{Description: "result2"},
+        },
+    },
 }
 ```
 
@@ -126,89 +126,89 @@ You can easily create a standalone agent (or integrate `polaris` into an existin
 package main
 
 import (
-	"fmt"
-	"os"
+    "fmt"
+    "os"
 
-	"github.com/octu0/polaris"
+    "github.com/octu0/polaris"
 )
 
 // Example: Tool to read the last N lines of a specific log file
 func registerLogReaderAgent(conn *polaris.Conn, logFilePath string) error {
-	// Ensure the log file exists (basic check)
-	if _, err := os.Stat(logFilePath); os.IsNotExist(err) {
-		return fmt.Errorf("log file not found: %s", logFilePath)
-	}
+    // Ensure the log file exists (basic check)
+    if _, err := os.Stat(logFilePath); os.IsNotExist(err) {
+        return fmt.Errorf("log file not found: %s", logFilePath)
+    }
 
-	return conn.RegisterTool(polaris.Tool{
-		Name:        "read_log_file",
-		Description: fmt.Sprintf("Reads the last N lines from the log file: %s", logFilePath),
-		Parameters: polaris.Object{
-			Properties: polaris.Properties{
-				"lines": polaris.Int{
-					Description: "Number of lines to read from the end of the file",
-					Required:    true,
-					Default:     10,
-				},
-			},
-		},
-		Response: polaris.Object{
-			Properties: polaris.Properties{
-				"log_content": polaris.String{
-					Description: "The last N lines of the log file",
-					Required:    true,
-				},
-			},
-		},
-		// The handler function implements the tool's logic
-		Handler: func(ctx *polaris.Ctx) error {
-			linesToRead := ctx.Int("lines")
-			if linesToRead <= 0 {
-				linesToRead = 10 // Use default if invalid
-			}
+    return conn.RegisterTool(polaris.Tool{
+        Name:        "read_log_file",
+        Description: fmt.Sprintf("Reads the last N lines from the log file: %s", logFilePath),
+        Parameters: polaris.Object{
+            Properties: polaris.Properties{
+                "lines": polaris.Int{
+                    Description: "Number of lines to read from the end of the file",
+                    Required:    true,
+                    Default:     10,
+                },
+            },
+        },
+        Response: polaris.Object{
+            Properties: polaris.Properties{
+                "log_content": polaris.String{
+                    Description: "The last N lines of the log file",
+                    Required:    true,
+                },
+            },
+        },
+        // The handler function implements the tool's logic
+        Handler: func(ctx *polaris.Ctx) error {
+            linesToRead := ctx.Int("lines")
+            if linesToRead <= 0 {
+                linesToRead = 10 // Use default if invalid
+            }
 
-			// --- Placeholder for actual file reading logic ---
-			// In a real implementation, you would securely read the
-			// last 'linesToRead' lines from 'logFilePath'.
-			// Example (conceptual, needs robust implementation):
-			// content, err := readLastLines(logFilePath, linesToRead)
-			// if err != nil {
-			//     return fmt.Errorf("failed to read log file: %w", err)
-			// }
-			// --- End Placeholder ---
+            // --- Placeholder for actual file reading logic ---
+            // In a real implementation, you would securely read the
+            // last 'linesToRead' lines from 'logFilePath'.
+            // Example (conceptual, needs robust implementation):
+            // content, err := readLastLines(logFilePath, linesToRead)
+            // if err != nil {
+            //     return fmt.Errorf("failed to read log file: %w", err)
+            // }
+            // --- End Placeholder ---
 
-			// Dummy content for example:
-			content := fmt.Sprintf("Read last %d lines of %s (implementation pending)", linesToRead, logFilePath)
+            // Dummy content for example:
+            content := fmt.Sprintf("Read last %d lines of %s (implementation pending)", linesToRead, logFilePath)
 
-			ctx.Set(polaris.Resp{
-				"log_content": content,
-			})
-			return nil // Return nil on success
-		},
-	})
+            ctx.Set(polaris.Resp{
+                "log_content": content,
+            })
+            return nil // Return nil on success
+        },
+    })
 }
 
 func main() {
-	// Example: Run an agent exposing a log reader tool
-	logFileToMonitor := "/var/log/app.log" // Example log file path
+    // Example: Run an agent exposing a log reader tool
+    logFileToMonitor := "/var/log/app.log" // Example log file path
 
-	// Connect the agent to the polaris registry
-	conn, err := polaris.Connect(polaris.ConnectAddress("127.0.0.1", "4222"))
-	if err != nil {
-		panic(fmt.Sprintf("Agent failed to connect: %v", err))
-	}
-	defer conn.Close()
-	fmt.Printf("Agent connected, monitoring %s\n", logFileToMonitor)
+    // Connect the agent to the polaris registry
+    conn, err := polaris.Connect(polaris.ConnectAddress("127.0.0.1", "4222"))
+    if err != nil {
+        panic(fmt.Sprintf("Agent failed to connect: %v", err))
+    }
+    defer conn.Close()
+    fmt.Printf("Agent connected, monitoring %s\n", logFileToMonitor)
 
-	// Register the specific tool this agent provides
-	err = registerLogReaderAgent(conn, logFileToMonitor)
-	if err != nil {
-		panic(fmt.Sprintf("Agent failed to register tool: %v", err))
-	}
-	fmt.Println("Log reader tool registered successfully.")
+    // Register the specific tool this agent provides
+    err = registerLogReaderAgent(conn, logFileToMonitor)
+    if err != nil {
+        panic(fmt.Sprintf("Agent failed to register tool: %v", err))
+    }
+    fmt.Println("Log reader tool registered successfully.")
 
-	// Keep the agent running to listen for function call requests
-	fmt.Println("Agent running...")
-	<-make(chan struct{}) // Block forever
+    // Keep the agent running to listen for function call requests
+    fmt.Println("Agent running...")
+    <-make(chan struct{}) // Block forever
 }
 ```
 
@@ -220,10 +220,10 @@ An AI model like Gemini can then discover and invoke functions hosted by your di
 package main
 
 import (
-	"context"
-	"fmt"
+    "context"
+    "fmt"
 
-	"github.com/octu0/polaris"
+    "github.com/octu0/polaris"
 )
 
 func main() {
@@ -296,7 +296,3 @@ Using `polaris`, AI orchestration capabilities, requires bellow:
 # License
 
 MIT, see LICENSE file for details.
-
----
-
-*Portions of this README were generated with the assistance of Google Gemini.*
