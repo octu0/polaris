@@ -16,7 +16,7 @@ import (
 type ConnectOptionFunc func(*ConnectOption)
 
 type ConnectOption struct {
-	NatsURL        string
+	NatsURL        []string
 	Name           string
 	Host           string
 	Port           string
@@ -32,7 +32,7 @@ type ConnectOption struct {
 	ReqTimeout     time.Duration
 }
 
-func NatsURL(url string) ConnectOptionFunc {
+func NatsURL(url ...string) ConnectOptionFunc {
 	return func(o *ConnectOption) {
 		o.NatsURL = url
 	}
@@ -205,6 +205,7 @@ func Connect(options ...ConnectOptionFunc) (*Conn, error) {
 	opt := &ConnectOption{
 		AllowReconnect: true,
 		MaxReconnects:  -1,
+		ReconnectWait:  1 * time.Second,
 		NoRandomize:    true,
 		NoEcho:         true,
 		ReqTimeout:     5 * time.Second,
@@ -222,11 +223,11 @@ func Connect(options ...ConnectOptionFunc) (*Conn, error) {
 		name = hostname
 	}
 
-	url := func() string {
-		if opt.NatsURL != "" {
+	url := func() []string {
+		if 0 < len(opt.NatsURL) {
 			return opt.NatsURL
 		}
-		return fmt.Sprintf("nats://%s:%s", opt.Host, opt.Port)
+		return []string{fmt.Sprintf("nats://%s:%s", opt.Host, opt.Port)}
 	}()
 	natsOpt := nats.GetDefaultOptions()
 	natsOpt.Name = name
@@ -236,7 +237,7 @@ func Connect(options ...ConnectOptionFunc) (*Conn, error) {
 	natsOpt.NoEcho = opt.NoEcho
 	natsOpt.Timeout = opt.Timeout
 	natsOpt.ReconnectWait = opt.ReconnectWait
-	natsOpt.Url = url
+	natsOpt.Servers = url
 
 	nc, err := natsOpt.Connect()
 	if err != nil {
@@ -298,13 +299,16 @@ func (c *Conn) UnregisterTools() error {
 }
 
 func (c *Conn) RegisterTool(t Tool) error {
-	subscribeReqResp(
+	if err := subscribeReqResp(
 		c,
 		tooltopic(t.Name),
 		JSONEncoder[map[string]any](),
 		JSONEncoder[map[string]any](),
 		handleToolCall(t),
-	)
+	); err != nil {
+		return errors.WithStack(err)
+	}
+
 	resp, err := requestWithData(
 		c,
 		TopicRegisterTool,

@@ -2,6 +2,7 @@ package polaris
 
 import (
 	"context"
+	"io"
 	"iter"
 	"log"
 	"os"
@@ -134,6 +135,9 @@ func (d *defaultRemoteCall) setDefaultArgsFunc(fn func() map[string]any) {
 }
 
 func (d *defaultRemoteCall) callFunction(name string, args map[string]any) (map[string]any, error) {
+	if d.logger == nil {
+		d.logger = &stdLogger{log.New(io.Discard, "", 0), false}
+	}
 	if d.defaultArgsFunc != nil {
 		defaultArgs := d.defaultArgsFunc()
 		for k, v := range defaultArgs {
@@ -153,6 +157,9 @@ func (d *defaultRemoteCall) callFunction(name string, args map[string]any) (map[
 	)
 	if err != nil {
 		return nil, errors.WithStack(err)
+	}
+	if resp, ok := resp["_error"]; ok {
+		return nil, errors.Errorf("error: %s", resp)
 	}
 	return resp, nil
 }

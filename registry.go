@@ -265,20 +265,23 @@ func CreateRegistry(opts ...RegistryOption) (*Registry, error) {
 	for _, fn := range opts {
 		fn(o)
 	}
+	if o.Cluster.PoolSize < 1 {
+		o.Cluster.PoolSize = -1
+	}
 
 	ns := server.New(o)
 	ns.DisableJetStream()
 	go ns.Start()
 
+	waitRouting := make(chan struct{})
 	if 0 < len(o.Routes) {
-		ch := make(chan struct{})
-		ns.StartRouting(ch)
-		<-ch
+		go ns.StartRouting(waitRouting)
 	}
 
 	if ns.ReadyForConnections(10*time.Second) != true {
 		return nil, errors.Errorf("failed to start server")
 	}
+	close(waitRouting)
 
 	conn, err := Connect(
 		NatsURL(ns.ClientURL()),
