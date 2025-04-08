@@ -349,6 +349,15 @@ func (c *Conn) Use(ctx context.Context, options ...UseOptionFunc) (Session, erro
 	return createSession(ctx, c, rc, options...)
 }
 
+func (c *Conn) Call(ctx context.Context, name string, req Req) (Resp, error) {
+	rc := &defaultRemoteCall{c, nil, nil}
+	ret, err := rc.callFunction(name, req.ToMap())
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return Resp(ret), nil
+}
+
 func (c *Conn) hasTool(d genai.FunctionDeclaration) bool {
 	for _, t := range c.tools {
 		if t.Name == d.Name {
@@ -471,6 +480,7 @@ func requestWithData[Req any, Resp any](c *Conn, topic string, encReq Encoder[Re
 	if err != nil {
 		return resp, errors.WithStack(err)
 	}
+
 	msg, err := c.nc.Request(topic, data, c.opt.ReqTimeout)
 	if err != nil {
 		return resp, errors.WithStack(err)

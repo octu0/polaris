@@ -5,7 +5,10 @@ import (
 )
 
 type JSONMap map[string]any
-type Resp = JSONMap
+type (
+	Req  = JSONMap
+	Resp = JSONMap
+)
 
 func (m JSONMap) Int(key string, defaultValue int) int {
 	if v, ok := m[key].(int); ok {
