@@ -52,7 +52,7 @@ func createSession(ctx context.Context, tc toolConn, rc remoteCall, options ...U
 		if _, ok := rt.Parameters.Properties["_error"]; ok != true {
 			rt.Parameters.Properties["_error"] = &genai.Schema{
 				Type:        genai.TypeString,
-				Description: "error message of called function",
+				Description: "Error details for failed function call",
 				Nullable:    true,
 			}
 		}
@@ -163,6 +163,7 @@ func (d *defaultRemoteCall) callFunction(name string, args map[string]any) (map[
 	if resp, ok := resp["_error"]; ok {
 		return nil, errors.Errorf("error: %s", resp)
 	}
+	delete(resp, "_error")
 	return resp, nil
 }
 
