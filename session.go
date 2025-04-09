@@ -76,7 +76,9 @@ func createSession(ctx context.Context, tc toolConn, rc remoteCall, options ...U
 
 	if opt.JSONOutput {
 		model.ResponseMIMEType = "application/json"
-		model.ResponseSchema = opt.OutputSchema.Schema()
+		if opt.OutputSchema != nil {
+			model.ResponseSchema = opt.OutputSchema.Schema()
+		}
 	}
 	if 0 < len(opt.SystemInstructions) {
 		model.SystemInstruction = &genai.Content{
