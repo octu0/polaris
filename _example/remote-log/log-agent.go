@@ -76,8 +76,7 @@ func main() {
 	fmt.Printf("Agent connected, monitoring %s\n", logFileToMonitor)
 
 	// Register the specific tool this agent provides
-	err = registerLogReaderAgent(conn, logFileToMonitor)
-	if err != nil {
+	if err := registerLogReaderAgent(conn, logFileToMonitor); err != nil {
 		panic(fmt.Sprintf("Agent failed to register tool: %v", err))
 	}
 	fmt.Println("Log reader tool registered successfully.")
