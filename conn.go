@@ -2,6 +2,7 @@ package polaris
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -177,6 +178,18 @@ func UseJSONOutput(schema TypeDef) UseOptionFunc {
 	}
 }
 
+func UseToolJSONOutput(conn *Conn, toolName string) UseOptionFunc {
+	return func(o *UseOption) {
+		if t, ok := conn.Tool(toolName); ok {
+			o.JSONOutput = true
+			o.OutputSchema = t.Response
+		} else {
+			o.JSONOutput = true
+			o.OutputSchema = nil
+		}
+	}
+}
+
 func UseMaxOutputTokens(size int32) UseOptionFunc {
 	return func(o *UseOption) {
 		o.MaxOutputTokens = size
@@ -243,7 +256,7 @@ func Connect(options ...ConnectOptionFunc) (*Conn, error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return newConn(opt, nc), nil
+	return newConn(natsOpt, opt, nc), nil
 }
 
 func Use(ctx context.Context, options ...UseOptionFunc) (Session, error) {
@@ -252,14 +265,58 @@ func Use(ctx context.Context, options ...UseOptionFunc) (Session, error) {
 	return createSession(ctx, tc, rc, options...)
 }
 
+type GenerateJSON func(...string) (Resp, error)
+
+func UseGenerateJSON(ctx context.Context, options ...UseOptionFunc) (GenerateJSON, error) {
+	tc := &noToolConn{}
+	rc := &panicRemoteCall{}
+	s, err := createSession(ctx, tc, rc, options...)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if s.JSONOutput() != true {
+		s.Close()
+		return nil, errors.Errorf("require JSONOutput=true")
+	}
+	return func(text ...string) (Resp, error) {
+		defer s.Close()
+		it, err := s.SendText(text...)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		for ret, err := range it {
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+
+			resp := Resp{}
+			if err := json.Unmarshal([]byte(ret), &resp); err != nil {
+				return nil, errors.WithStack(err)
+			}
+			return resp, nil
+		}
+		return nil, nil
+	}, nil
+}
+
 type Conn struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-	opt    *ConnectOption
-	nc     *nats.Conn
-	subs   []*nats.Subscription
-	tools  []Tool
-	logger Logger
+	ctx     context.Context
+	cancel  context.CancelFunc
+	natsOpt nats.Options
+	opt     *ConnectOption
+	nc      *nats.Conn
+	subs    []*nats.Subscription
+	tools   []Tool
+	logger  Logger
+}
+
+func (c *Conn) NewConnection() (*Conn, error) {
+	nc, err := c.natsOpt.Connect()
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return newConn(c.natsOpt, c.opt, nc), nil
 }
 
 func (c *Conn) Close() {
@@ -324,6 +381,15 @@ func (c *Conn) RegisterTool(t Tool) error {
 	}
 	c.tools = append(c.tools, t)
 	return nil
+}
+
+func (c *Conn) Tool(name string) (Tool, bool) {
+	for _, t := range c.tools {
+		if t.Name == name {
+			return t, true
+		}
+	}
+	return Tool{}, false
 }
 
 func (c *Conn) listTools(useLocalTool bool) ([]genai.FunctionDeclaration, error) {
@@ -411,15 +477,16 @@ func (c *Conn) toolKeepAliveLoop(ctx context.Context) {
 	}
 }
 
-func newConn(opt *ConnectOption, nc *nats.Conn) *Conn {
+func newConn(natsOpt nats.Options, opt *ConnectOption, nc *nats.Conn) *Conn {
 	ctx, cancel := context.WithCancel(context.Background())
 	c := &Conn{
-		ctx:    ctx,
-		cancel: cancel,
-		opt:    opt,
-		nc:     nc,
-		subs:   make([]*nats.Subscription, 0),
-		tools:  make([]Tool, 0),
+		ctx:     ctx,
+		cancel:  cancel,
+		natsOpt: natsOpt,
+		opt:     opt,
+		nc:      nc,
+		subs:    make([]*nats.Subscription, 0),
+		tools:   make([]Tool, 0),
 		logger: &stdLogger{
 			log.New(os.Stdout, "polaris ", log.LstdFlags),
 			false,

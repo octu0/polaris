@@ -15,6 +15,7 @@ import (
 type Session interface {
 	SendText(...string) (iter.Seq2[string, error], error)
 	Close() error
+	JSONOutput() bool
 }
 
 func createSession(ctx context.Context, tc toolConn, rc remoteCall, options ...UseOptionFunc) (Session, error) {
@@ -98,7 +99,7 @@ func createSession(ctx context.Context, tc toolConn, rc remoteCall, options ...U
 		}
 	}
 
-	return &LiveSession{ctx, logger, rc, client, model.StartChat()}, nil
+	return &LiveSession{ctx, opt, logger, rc, client, model.StartChat()}, nil
 }
 
 type remoteCall interface {
@@ -176,10 +177,15 @@ type funcallCtx struct {
 
 type LiveSession struct {
 	ctx     context.Context
+	opt     *UseOption
 	logger  Logger
 	rc      remoteCall
 	client  *genai.Client
 	session *genai.ChatSession
+}
+
+func (s *LiveSession) JSONOutput() bool {
+	return s.opt.JSONOutput
 }
 
 func (s *LiveSession) Close() error {
