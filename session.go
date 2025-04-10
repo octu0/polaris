@@ -269,6 +269,11 @@ func (s *LiveSession) handleMsg(genContentResp *genai.GenerateContentResponse) i
 		}
 		for {
 			s.logger.DebugF("finish reasion: %s", resp.Candidates[0].FinishReason)
+			if resp.Candidates[0].FinishReason == genai.FinishReasonMalformedFunctionCall {
+				s.logger.Warnf("malformed function call: %s", resp.Candidates[0].FinishMessage)
+				return
+			}
+
 			if resp.UsageMetadata == nil {
 				return
 			}
