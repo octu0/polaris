@@ -13,7 +13,7 @@ import (
 
 func main() {
 	nodeID := "1"
-	if len(os.Args) > 1 {
+	if 1 < len(os.Args) {
 		nodeID = os.Args[1]
 	}
 
