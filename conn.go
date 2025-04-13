@@ -393,7 +393,7 @@ func (c *Conn) Tool(name string) (Tool, bool) {
 }
 
 func (c *Conn) listTools(useLocalTool bool) ([]genai.FunctionDeclaration, error) {
-	list, err := request(
+	remoteList, err := request(
 		c,
 		TopicListTool,
 		GobEncoder[[]genai.FunctionDeclaration](),
@@ -402,9 +402,9 @@ func (c *Conn) listTools(useLocalTool bool) ([]genai.FunctionDeclaration, error)
 		return nil, errors.WithStack(err)
 	}
 
-	declares := make([]genai.FunctionDeclaration, 0, len(list))
-	for _, d := range list {
-		if c.hasTool(d) {
+	declares := make([]genai.FunctionDeclaration, 0, len(remoteList))
+	for _, d := range remoteList {
+		if _, ok := c.Tool(d.Name); ok {
 			if useLocalTool != true {
 				continue
 			}
@@ -426,15 +426,6 @@ func (c *Conn) Call(ctx context.Context, name string, req Req) (Resp, error) {
 		return nil, errors.WithStack(err)
 	}
 	return Resp(ret), nil
-}
-
-func (c *Conn) hasTool(d genai.FunctionDeclaration) bool {
-	for _, t := range c.tools {
-		if t.Name == d.Name {
-			return true
-		}
-	}
-	return false
 }
 
 func (c *Conn) toolKeepAlive() {
