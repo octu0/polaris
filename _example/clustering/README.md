@@ -40,7 +40,11 @@ $ go run registry.go 3
 Tool connects to multiple clusters with the following options:
 
 ```go
-conn, _ := polaris.Connect(polaris.NatsURL("nats://127.0.0.1:4222", "nats://127.0.0.1:4223", "nats://127.0.0.1:4224"))
+conn, _ := polaris.Connect(
+	polaris.NatsURL(
+		"nats://127.0.0.1:4222", "nats://127.0.0.1:4223", "nats://127.0.0.1:4224",
+	)
+)
 conn.RegisterTool(polaris.Tool{Name: "calculator", ...})
 ```
 
@@ -55,7 +59,11 @@ $ go run tool.go
 To invoke Tool/Agent, specify multiple clusters with the following options:
 
 ```go
-client, _ := polaris.Connect(polaris.NatsURL("nats://127.0.0.1:4222", "nats://127.0.0.1:4223", "nats://127.0.0.1:4224"))
+client, _ := polaris.Connect(
+	polaris.NatsURL(
+		"nats://127.0.0.1:4222", "nats://127.0.0.1:4223", "nats://127.0.0.1:4224",
+	)
+)
 client.Call(ctx, "calculator", polaris.Req{...})
 ```
 
