@@ -29,6 +29,12 @@ This allows AI models (such as Google's Vertex AI Gemini) to intelligently inter
 go get github.com/octu0/polaris
 ```
 
+## Architecture overview
+
+<h1 align="center" style="border-bottom: none">
+  <img src="docs/polaris-arch.svg" alt="Polaris Architecture">
+</h1>
+
 ## Simplified JSON Schema Definition
 
 Defining the structure (Schema) for your functions is significantly easier with `polaris` compared to standard Go structures for AI Function Calling.
