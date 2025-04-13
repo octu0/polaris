@@ -12,19 +12,7 @@ func Example_jsonOutput_promptInstruction() {
 		ctx,
 		UseModel("gemini-2.5-pro-exp-03-25"),
 		UseTemperature(0.2),
-		UseJSONOutput(Object{
-			Description: "result of each",
-			Properties: Properties{
-				"resultA": Int{
-					Description: "result 1",
-					Required:    true,
-				},
-				"resultB": Int{
-					Description: "result 2",
-					Required:    true,
-				},
-			},
-		}),
+		UseJSONOutput(nil),
 	)
 	if err != nil {
 		panic(err)
@@ -35,8 +23,9 @@ func Example_jsonOutput_promptInstruction() {
 		execute this task:
 		1. Sum 35 and 21
 		2. multiply by 88 using one previous answer.
+		3. Return the result by following "JSONSchema" format.
 
-		output(JSON schema):
+		output(JSONSchema):
 		ret={
 			"resultA": int,
 			"resultB": int,
