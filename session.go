@@ -102,6 +102,20 @@ func createSession(ctx context.Context, tc toolConn, rc remoteCall, options ...U
 	return &LiveSession{ctx, opt, logger, rc, client, model.StartChat()}, nil
 }
 
+type toolConn interface {
+	listTools(bool) ([]genai.FunctionDeclaration, error)
+}
+
+var (
+	_ toolConn = (*noToolConn)(nil)
+)
+
+type noToolConn struct{}
+
+func (*noToolConn) listTools(bool) ([]genai.FunctionDeclaration, error) {
+	return nil, nil
+}
+
 type remoteCall interface {
 	setLogger(Logger)
 	setDefaultArgsFunc(func() map[string]any)

@@ -18,13 +18,10 @@ func main() {
 	}
 	defer conn.Close()
 
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
-	defer cancel()
-
+	ctx := context.TODO()
 	session, err := conn.Use(
 		ctx,
 		polaris.UseModel("gemini-2.5-pro-exp-03-25"),
-		//polaris.UseModel("gemini-2.0-flash-001"),
 		polaris.UseSystemInstruction(
 			polaris.AddTextSystemInstruction("Output must be in Japanese."),
 		),

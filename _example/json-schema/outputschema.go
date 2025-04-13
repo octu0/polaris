@@ -3,17 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
-	"os/signal"
-	"syscall"
 
 	"github.com/octu0/polaris"
 )
 
 func main() {
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
-	defer cancel()
+	ctx := context.TODO()
 
-	gen, err := polaris.UseGenerateJSON(
+	gen, err := polaris.GenerateJSON(
 		ctx,
 		polaris.UseModel("gemini-2.5-pro-exp-03-25"),
 		polaris.UseTemperature(0.2),

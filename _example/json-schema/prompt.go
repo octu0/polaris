@@ -3,22 +3,16 @@ package main
 import (
 	"context"
 	"fmt"
-	"os/signal"
-	"syscall"
 
 	"github.com/octu0/polaris"
 )
 
 func main() {
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
-	defer cancel()
+	ctx := context.TODO()
 
-	session, err := polaris.Use(
+	session, err := polaris.Generate(
 		ctx,
 		polaris.UseModel("gemini-2.5-pro-exp-03-25"),
-		polaris.UseSystemInstruction(
-			polaris.AddTextSystemInstruction("Output must be in Japanese."),
-		),
 		polaris.UseTemperature(0.2),
 		polaris.UseJSONOutput(polaris.Object{
 			Description: "result of each",
@@ -61,4 +55,10 @@ func main() {
 		}
 		fmt.Println(msg)
 	}
+	// Outputs:
+	// {
+	//   "resultA": 56,
+	//   "resultB": 4928
+	// }
+	//
 }

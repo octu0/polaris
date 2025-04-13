@@ -259,15 +259,15 @@ func Connect(options ...ConnectOptionFunc) (*Conn, error) {
 	return newConn(natsOpt, opt, nc), nil
 }
 
-func Use(ctx context.Context, options ...UseOptionFunc) (Session, error) {
+func Generate(ctx context.Context, options ...UseOptionFunc) (Session, error) {
 	tc := &noToolConn{}
 	rc := &panicRemoteCall{}
 	return createSession(ctx, tc, rc, options...)
 }
 
-type GenerateJSON func(...string) (Resp, error)
+type GenerateJSONFunc func(...string) (Resp, error)
 
-func UseGenerateJSON(ctx context.Context, options ...UseOptionFunc) (GenerateJSON, error) {
+func GenerateJSON(ctx context.Context, options ...UseOptionFunc) (GenerateJSONFunc, error) {
 	tc := &noToolConn{}
 	rc := &panicRemoteCall{}
 	s, err := createSession(ctx, tc, rc, options...)
@@ -494,20 +494,6 @@ func newConn(natsOpt nats.Options, opt *ConnectOption, nc *nats.Conn) *Conn {
 	}
 	go c.toolKeepAliveLoop(ctx)
 	return c
-}
-
-type toolConn interface {
-	listTools(bool) ([]genai.FunctionDeclaration, error)
-}
-
-var (
-	_ toolConn = (*noToolConn)(nil)
-)
-
-type noToolConn struct{}
-
-func (*noToolConn) listTools(bool) ([]genai.FunctionDeclaration, error) {
-	return nil, nil
 }
 
 func handleToolCall(t Tool) func(map[string]any) map[string]any {
