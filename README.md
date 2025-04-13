@@ -200,8 +200,7 @@ func main() {
     fmt.Printf("Agent connected, monitoring %s\n", logFileToMonitor)
 
     // Register the specific tool this agent provides
-    err = registerLogReaderAgent(conn, logFileToMonitor)
-    if err != nil {
+    if err := registerLogReaderAgent(conn, logFileToMonitor); err != nil {
         panic(fmt.Sprintf("Agent failed to register tool: %v", err))
     }
     fmt.Println("Log reader tool registered successfully.")
@@ -277,6 +276,59 @@ func main() {
         fmt.Println(msg) // Print the content part of the message
     }
     fmt.Println("Interaction complete.")
+}
+```
+
+## Usage Example: Simple LLM call with JSON Schema
+
+It can be used without linking with Tool/Agent.
+You can get the data in any format by specifying JSON Schema.
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+
+    "github.com/octu0/polaris"
+)
+
+func main() {
+    ctx := context.TODO()
+
+    gen, err := polaris.GenerateJSON(
+        ctx,
+        polaris.UseModel("gemini-2.5-pro-exp-03-25"),
+        polaris.UseTemperature(0.2),
+        polaris.UseJSONOutput(polaris.Object{
+            Description: "result of each",
+            Properties: polaris.Properties{
+                "resultA": polaris.Int{
+                    Description: "result 1",
+                    Required:    true,
+                },
+                "resultB": polaris.Int{
+                    Description: "result 2",
+                    Required:    true,
+                },
+            },
+        }),
+    )
+    if err != nil {
+        panic(err)
+    }
+
+    prompt := `
+        execute this task:
+        1. Sum 35 and 21
+        2. multiply by 88 using one previous answer.
+    `
+    resp, err := gen(prompt)
+    if err != nil {
+        panic(err)
+    }
+    fmt.Println(resp)
 }
 ```
 
