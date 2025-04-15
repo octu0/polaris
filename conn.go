@@ -101,6 +101,12 @@ func ReconnectWait(reconnectWait time.Duration) ConnectOptionFunc {
 	}
 }
 
+func RequestTimeout(timeout time.Duration) ConnectOptionFunc {
+	return func(o *ConnectOption) {
+		o.ReqTimeout = timeout
+	}
+}
+
 type UseOptionFunc func(*UseOption)
 
 type UseOption struct {
