@@ -270,8 +270,9 @@ func (s *LiveSession) handleMsg(genContentResp *genai.GenerateContentResponse) i
 
 			resp2, err := s.session.SendMessage(s.ctx, funcResults...)
 			if err != nil {
-				yield("", errors.WithStack(err))
-				return nil, errors.WithStack(err)
+				err = errors.WithStack(err)
+				yield("", err)
+				return nil, err
 			}
 			return resp2, nil
 		}
@@ -284,7 +285,9 @@ func (s *LiveSession) handleMsg(genContentResp *genai.GenerateContentResponse) i
 		for {
 			s.logger.DebugF("finish reasion: %s", resp.Candidates[0].FinishReason)
 			if resp.Candidates[0].FinishReason == genai.FinishReasonMalformedFunctionCall {
-				s.logger.Warnf("malformed function call: %s", resp.Candidates[0].FinishMessage)
+				err := errors.Errorf("malformed function call: %s", resp.Candidates[0].FinishMessage)
+				s.logger.Warnf("%+v", err)
+				yield("", err)
 				return
 			}
 
