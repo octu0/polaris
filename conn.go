@@ -9,6 +9,9 @@ import (
 	"time"
 
 	"cloud.google.com/go/vertexai/genai"
+	"github.com/mark3labs/mcp-go/client"
+	"github.com/mark3labs/mcp-go/client/transport"
+	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"google.golang.org/api/option"
@@ -307,14 +310,15 @@ func GenerateJSON(ctx context.Context, options ...UseOptionFunc) (GenerateJSONFu
 }
 
 type Conn struct {
-	ctx     context.Context
-	cancel  context.CancelFunc
-	natsOpt nats.Options
-	opt     *ConnectOption
-	nc      *nats.Conn
-	subs    []*nats.Subscription
-	tools   []Tool
-	logger  Logger
+	ctx        context.Context
+	cancel     context.CancelFunc
+	natsOpt    nats.Options
+	opt        *ConnectOption
+	nc         *nats.Conn
+	subs       []*nats.Subscription
+	tools      []Tool
+	mcpClients []*client.Client
+	logger     Logger
 }
 
 func (c *Conn) NewConnection() (*Conn, error) {
@@ -331,6 +335,9 @@ func (c *Conn) Close() {
 		sub.Unsubscribe()
 	}
 	c.UnregisterTools()
+	for _, c := range c.mcpClients {
+		c.Close()
+	}
 	c.subs = nil
 	c.nc.Close()
 }
@@ -386,6 +393,70 @@ func (c *Conn) RegisterTool(t Tool) error {
 		return errors.WithStack(err)
 	}
 	c.tools = append(c.tools, t)
+	return nil
+}
+
+func (c *Conn) RegisterSSEMCPTools(baseURL string, initReq mcp.InitializeRequest, options ...transport.ClientOption) error {
+	mcpClient, err := client.NewSSEMCPClient(baseURL, options...)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if err := mcpClient.Start(c.ctx); err != nil {
+		return errors.WithStack(err)
+	}
+
+	initResp, err := mcpClient.Initialize(c.ctx, initReq)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	c.logger.Infof("sseMCPClient init=%v", initResp.ServerInfo)
+
+	r, err := mcpClient.ListTools(c.ctx, mcp.ListToolsRequest{})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	tools := make([]Tool, 0)
+	for _, t := range r.Tools {
+		tools = append(tools, Tool{
+			Name:        t.Name,
+			Description: t.Description,
+			Parameters:  convertInputSchema(t.InputSchema),
+			Response:    Object{},
+		})
+	}
+
+	for _, t := range tools {
+		if err := subscribeReqResp(
+			c,
+			tooltopic(t.Name),
+			JSONEncoder[map[string]any](),
+			JSONEncoder[map[string]any](),
+			handleMCPToolCall(c.ctx, mcpClient, t),
+		); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+
+	for _, t := range tools {
+		resp, err := requestWithData(
+			c,
+			TopicRegisterTool,
+			GobEncoder[genai.FunctionDeclaration](),
+			GobEncoder[RespError](),
+			t.FunctionDeclaration(),
+		)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		if err := resp.Err(); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+
+	c.tools = append(c.tools, tools...)
+	c.mcpClients = append(c.mcpClients, mcpClient)
 	return nil
 }
 
@@ -477,13 +548,14 @@ func (c *Conn) toolKeepAliveLoop(ctx context.Context) {
 func newConn(natsOpt nats.Options, opt *ConnectOption, nc *nats.Conn) *Conn {
 	ctx, cancel := context.WithCancel(context.Background())
 	c := &Conn{
-		ctx:     ctx,
-		cancel:  cancel,
-		natsOpt: natsOpt,
-		opt:     opt,
-		nc:      nc,
-		subs:    make([]*nats.Subscription, 0),
-		tools:   make([]Tool, 0),
+		ctx:        ctx,
+		cancel:     cancel,
+		natsOpt:    natsOpt,
+		opt:        opt,
+		nc:         nc,
+		subs:       make([]*nats.Subscription, 0),
+		tools:      make([]Tool, 0),
+		mcpClients: make([]*client.Client, 0),
 		logger: &stdLogger{
 			log.New(os.Stdout, "polaris ", log.LstdFlags),
 			false,
@@ -491,26 +563,6 @@ func newConn(natsOpt nats.Options, opt *ConnectOption, nc *nats.Conn) *Conn {
 	}
 	go c.toolKeepAliveLoop(ctx)
 	return c
-}
-
-func handleToolCall(t Tool) func(map[string]any) map[string]any {
-	return func(req map[string]any) map[string]any {
-		j := make(JSONMap, len(req))
-		for k, v := range req {
-			j.Set(k, v)
-		}
-		resp := Resp{}
-		ctx := Ctx{j, t.Parameters, &resp}
-		if err := t.Handler(&ctx); err != nil {
-			if t.ErrorHandler != nil {
-				t.ErrorHandler(err)
-			}
-			return map[string]any{
-				"_error": err.Error(),
-			}
-		}
-		return resp.ToMap()
-	}
 }
 
 func tooltopic(name string) string {

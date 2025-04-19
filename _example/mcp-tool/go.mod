@@ -1,10 +1,13 @@
-module github.com/octu0/polaris/_example/remote-log
+module github.com/octu0/polaris/_example/mcp-tool
 
 go 1.23.0
 
 toolchain go1.23.7
 
-require github.com/octu0/polaris v0.0.0
+require (
+	github.com/mark3labs/mcp-go v0.21.1
+	github.com/octu0/polaris v0.0.0
+)
 
 require (
 	cloud.google.com/go v0.120.0 // indirect
@@ -20,10 +23,10 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/go-tpm v0.9.3 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
 	github.com/googleapis/gax-go/v2 v2.14.1 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
-	github.com/mark3labs/mcp-go v0.21.1 // indirect
 	github.com/minio/highwayhash v1.0.3 // indirect
 	github.com/nats-io/jwt/v2 v2.7.3 // indirect
 	github.com/nats-io/nats-server/v2 v2.11.0 // indirect

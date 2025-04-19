@@ -6,4 +6,5 @@ use (
     ./_example/json-schema
     ./_example/remote-log
     ./_example/error-tool
+    ./_example/mcp-tool
 )

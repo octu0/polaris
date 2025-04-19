@@ -5,6 +5,7 @@ go 1.23.0
 toolchain go1.23.7
 
 require (
+	github.com/mark3labs/mcp-go v0.21.1
 	github.com/nats-io/nats.go v1.39.1
 	github.com/pkg/errors v0.9.1
 	google.golang.org/api v0.228.0
@@ -22,6 +23,7 @@ require (
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
 	github.com/googleapis/gax-go/v2 v2.14.1 // indirect
+	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.60.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.60.0 // indirect

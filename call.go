@@ -1,11 +1,61 @@
 package polaris
 
 import (
+	"context"
 	"io"
 	"log"
 
+	"github.com/mark3labs/mcp-go/client"
+	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/pkg/errors"
 )
+
+func handleToolCall(t Tool) func(req map[string]any) map[string]any {
+	return func(req map[string]any) map[string]any {
+		j := make(JSONMap, len(req))
+		for k, v := range req {
+			j.Set(k, v)
+		}
+		resp := Resp{}
+		ctx := Ctx{j, t.Parameters, &resp}
+		if err := t.Handler(&ctx); err != nil {
+			if t.ErrorHandler != nil {
+				t.ErrorHandler(err)
+			}
+			return map[string]any{
+				"_error": err.Error(),
+			}
+		}
+		return resp.ToMap()
+	}
+}
+
+func handleMCPToolCall(ctx context.Context, client *client.Client, t Tool) func(req map[string]any) map[string]any {
+	return func(req map[string]any) map[string]any {
+		r := mcp.CallToolRequest{}
+		r.Params.Name = t.Name
+		r.Params.Arguments = req
+		res, err := client.CallTool(ctx, r)
+		if err != nil {
+			if t.ErrorHandler != nil {
+				t.ErrorHandler(err)
+			}
+			return map[string]any{
+				"_error": err.Error(),
+			}
+		}
+
+		texts := make([]string, len(res.Content))
+		for i, c := range res.Content {
+			if tc, ok := c.(mcp.TextContent); ok {
+				texts[i] = tc.Text
+			}
+		}
+		resp := Resp{}
+		resp.Set("results", texts)
+		return resp.ToMap()
+	}
+}
 
 type remoteCall interface {
 	setLogger(Logger)
