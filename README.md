@@ -22,6 +22,7 @@ This allows AI models (such as Google's Vertex AI Gemini) to intelligently inter
 4.  **Simplified JSON Schema:** Define function parameters and responses with a much more concise and readable syntax compared to standard library methods.
 5.  **Simple Agent Implementation:** Easily define and register functions ("Tools") within a `polaris` agent to interact with local files, APIs, or system commands.
 6.  **Vertex AI Gemini Focused:** Optimized for seamless integration and interaction with Vertex AI **Gemini** models for orchestrating function calls.
+7.  **Support MCP(Experimental):** Tools can be integrated with MCP (see `_example/mcp-tool`)
 
 ## Installation
 
