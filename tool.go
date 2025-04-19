@@ -20,14 +20,18 @@ func (n NullableType) Nullable() bool {
 	}
 }
 
-type ToolHandler func(*Ctx) error
+type (
+	ToolHandler  func(*Ctx) error
+	ErrorHandler func(error)
+)
 
 type Tool struct {
-	Name        string
-	Description string
-	Parameters  Object
-	Response    Object
-	Handler     ToolHandler
+	Name         string
+	Description  string
+	Parameters   Object
+	Response     Object
+	Handler      ToolHandler
+	ErrorHandler ErrorHandler
 }
 
 func (t Tool) FunctionDeclaration() genai.FunctionDeclaration {

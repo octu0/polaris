@@ -293,3 +293,7 @@ func (c *Ctx) Set(r Resp) {
 		c.resp.Set(k, v)
 	}
 }
+
+func (c *Ctx) Req() Req {
+	return c.req
+}

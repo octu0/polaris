@@ -502,6 +502,9 @@ func handleToolCall(t Tool) func(map[string]any) map[string]any {
 		resp := Resp{}
 		ctx := Ctx{j, t.Parameters, &resp}
 		if err := t.Handler(&ctx); err != nil {
+			if t.ErrorHandler != nil {
+				t.ErrorHandler(err)
+			}
 			return map[string]any{
 				"_error": err.Error(),
 			}
