@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"cloud.google.com/go/vertexai/genai"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/pkg/errors"
+	"google.golang.org/genai"
 )
 
 const (
@@ -60,8 +60,8 @@ func (r *Registry) subscribeTool() error {
 	if err := subscribeReqResp(
 		r.conn,
 		TopicRegisterTool,
-		GobEncoder[genai.FunctionDeclaration](),
-		GobEncoder[RespError](),
+		JSONEncoder[genai.FunctionDeclaration](),
+		JSONEncoder[RespError](),
 		r.handleRegisterTool,
 	); err != nil {
 		return errors.WithStack(err)
@@ -70,8 +70,8 @@ func (r *Registry) subscribeTool() error {
 	if err := subscribeReqResp(
 		r.conn,
 		TopicUnregisterTool,
-		GobEncoder[genai.FunctionDeclaration](),
-		GobEncoder[RespError](),
+		JSONEncoder[genai.FunctionDeclaration](),
+		JSONEncoder[RespError](),
 		r.handleUnregisterTool,
 	); err != nil {
 		return errors.WithStack(err)
@@ -80,7 +80,7 @@ func (r *Registry) subscribeTool() error {
 	if err := subscribeResp(
 		r.conn,
 		TopicListTool,
-		GobEncoder[[]genai.FunctionDeclaration](),
+		JSONEncoder[[]genai.FunctionDeclaration](),
 		r.handleListTool,
 	); err != nil {
 		return errors.WithStack(err)
@@ -89,8 +89,8 @@ func (r *Registry) subscribeTool() error {
 	if err := subscribeReqResp(
 		r.conn,
 		TopicToolKeepalive,
-		GobEncoder[[]genai.FunctionDeclaration](),
-		GobEncoder[RespError](),
+		JSONEncoder[[]genai.FunctionDeclaration](),
+		JSONEncoder[RespError](),
 		r.handleToolKeepAlive,
 	); err != nil {
 		return errors.WithStack(err)

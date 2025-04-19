@@ -1,6 +1,6 @@
 package polaris
 
-import "cloud.google.com/go/vertexai/genai"
+import "google.golang.org/genai"
 
 type NullableType string
 
@@ -88,7 +88,7 @@ func (o Object) Schema() *genai.Schema {
 		Description: o.Description,
 		Properties:  properties,
 		Required:    requiredKeys,
-		Nullable:    o.Nullable.Nullable(),
+		Nullable:    genai.Ptr(o.Nullable.Nullable()),
 	}
 }
 
@@ -193,7 +193,7 @@ func (a Array) Schema() *genai.Schema {
 		Type:        genai.TypeArray,
 		Description: a.Description,
 		Items:       a.Items.Schema(),
-		Nullable:    a.Nullable.Nullable(),
+		Nullable:    genai.Ptr(a.Nullable.Nullable()),
 	}
 }
 
@@ -209,7 +209,7 @@ func (ia IntArray) Schema() *genai.Schema {
 			Type:        genai.TypeInteger,
 			Description: ia.ItemDescription,
 		},
-		Nullable: ia.Nullable.Nullable(),
+		Nullable: genai.Ptr(ia.Nullable.Nullable()),
 	}
 }
 
@@ -225,7 +225,7 @@ func (fa FloatArray) Schema() *genai.Schema {
 			Type:        genai.TypeNumber,
 			Description: fa.ItemDescription,
 		},
-		Nullable: fa.Nullable.Nullable(),
+		Nullable: genai.Ptr(fa.Nullable.Nullable()),
 	}
 }
 
@@ -241,7 +241,7 @@ func (sa StringArray) Schema() *genai.Schema {
 			Type:        genai.TypeString,
 			Description: sa.ItemDescription,
 		},
-		Nullable: sa.Nullable.Nullable(),
+		Nullable: genai.Ptr(sa.Nullable.Nullable()),
 	}
 }
 
@@ -257,7 +257,7 @@ func (ba BoolArray) Schema() *genai.Schema {
 			Type:        genai.TypeBoolean,
 			Description: ba.ItemDescription,
 		},
-		Nullable: ba.Nullable.Nullable(),
+		Nullable: genai.Ptr(ba.Nullable.Nullable()),
 	}
 }
 
@@ -283,7 +283,7 @@ func (oa ObjectArray) Schema() *genai.Schema {
 			Properties:  properties,
 			Required:    requiredKeys,
 		},
-		Nullable: oa.Nullable.Nullable(),
+		Nullable: genai.Ptr(oa.Nullable.Nullable()),
 	}
 }
 
@@ -325,7 +325,7 @@ func (ie IntEnum) Schema() *genai.Schema {
 		Description: ie.Description,
 		Enum:        ie.Values,
 		Format:      "enum",
-		Nullable:    ie.Nullable.Nullable(),
+		Nullable:    genai.Ptr(ie.Nullable.Nullable()),
 	}
 }
 
@@ -339,7 +339,7 @@ func (se StringEnum) Schema() *genai.Schema {
 		Description: se.Description,
 		Enum:        se.Values,
 		Format:      "enum",
-		Nullable:    se.Nullable.Nullable(),
+		Nullable:    genai.Ptr(se.Nullable.Nullable()),
 	}
 }
 
@@ -363,7 +363,7 @@ func (i Int) Schema() *genai.Schema {
 		Type:        genai.TypeInteger,
 		Description: i.Description,
 		//Default:     i.Default,
-		Nullable: i.Nullable.Nullable(),
+		Nullable: genai.Ptr(i.Nullable.Nullable()),
 	}
 }
 
@@ -387,7 +387,7 @@ func (f Float) Schema() *genai.Schema {
 		Type:        genai.TypeNumber,
 		Description: f.Description,
 		//Default:     f.Default,
-		Nullable: f.Nullable.Nullable(),
+		Nullable: genai.Ptr(f.Nullable.Nullable()),
 	}
 }
 
@@ -411,7 +411,7 @@ func (s String) Schema() *genai.Schema {
 		Type:        genai.TypeString,
 		Description: s.Description,
 		//Default:     s.Default,
-		Nullable: s.Nullable.Nullable(),
+		Nullable: genai.Ptr(s.Nullable.Nullable()),
 	}
 }
 
@@ -435,7 +435,7 @@ func (b Bool) Schema() *genai.Schema {
 		Type:        genai.TypeBoolean,
 		Description: b.Description,
 		//Default:     b.Default,
-		Nullable: b.Nullable.Nullable(),
+		Nullable: genai.Ptr(b.Nullable.Nullable()),
 	}
 }
 

@@ -1,7 +1,7 @@
 package polaris
 
 import (
-	"cloud.google.com/go/vertexai/genai"
+	"google.golang.org/genai"
 )
 
 type JSONMap map[string]any

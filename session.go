@@ -2,19 +2,17 @@ package polaris
 
 import (
 	"context"
-	"io"
 	"iter"
 	"log"
 	"os"
 	"sync"
 
-	"cloud.google.com/go/vertexai/genai"
 	"github.com/pkg/errors"
+	"google.golang.org/genai"
 )
 
 type Session interface {
 	SendText(...string) (iter.Seq2[string, error], error)
-	Close() error
 	JSONOutput() bool
 }
 
@@ -54,7 +52,7 @@ func createSession(ctx context.Context, tc toolConn, rc remoteCall, options ...U
 			rt.Parameters.Properties["_error"] = &genai.Schema{
 				Type:        genai.TypeString,
 				Description: "Error details for failed function call",
-				Nullable:    true,
+				Nullable:    genai.Ptr(true),
 			}
 		}
 		functionDeclarations[i] = &genai.FunctionDeclaration{
@@ -66,40 +64,48 @@ func createSession(ctx context.Context, tc toolConn, rc remoteCall, options ...U
 		functionNames[i] = rt.Name
 	}
 
-	client, err := geminiClient(ctx)
-	if err != nil {
-		return nil, errors.WithStack(err)
+	genContentConfig := &genai.GenerateContentConfig{
+		Temperature:     genai.Ptr(opt.Temperature),
+		TopP:            genai.Ptr(opt.TopP),
+		MaxOutputTokens: opt.MaxOutputTokens,
 	}
-	model := client.GenerativeModel(opt.Model)
-	model.Temperature = genai.Ptr(opt.Temperature)
-	model.TopP = genai.Ptr(opt.TopP)
-	model.MaxOutputTokens = genai.Ptr(opt.MaxOutputTokens)
-
 	if opt.JSONOutput {
-		model.ResponseMIMEType = "application/json"
+		genContentConfig.ResponseMIMEType = "application/json"
 		if opt.OutputSchema != nil {
-			model.ResponseSchema = opt.OutputSchema.Schema()
+			genContentConfig.ResponseSchema = opt.OutputSchema.Schema()
 		}
 	}
 	if 0 < len(opt.SystemInstructions) {
-		model.SystemInstruction = &genai.Content{
+		genContentConfig.SystemInstruction = &genai.Content{
 			Parts: opt.SystemInstructions,
 		}
 	}
 	// JSONOutput && Tools = does not support
 	if 0 < len(functionDeclarations) && opt.JSONOutput != true {
-		model.Tools = []*genai.Tool{{
+		genContentConfig.Tools = []*genai.Tool{{
 			FunctionDeclarations: functionDeclarations,
 		}}
-		model.ToolConfig = &genai.ToolConfig{
+		genContentConfig.ToolConfig = &genai.ToolConfig{
 			FunctionCallingConfig: &genai.FunctionCallingConfig{
-				Mode: genai.FunctionCallingAuto,
+				Mode: genai.FunctionCallingConfigModeAuto,
 				//AllowedFunctionNames: functionNames,
 			},
 		}
 	}
+	if opt.ThinkingConfig != nil {
+		genContentConfig.ThinkingConfig = opt.ThinkingConfig
+	}
 
-	return &LiveSession{ctx, opt, logger, rc, client, model.StartChat()}, nil
+	client, err := geminiClient(ctx)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	session, err := client.Chats.Create(ctx, opt.Model, genContentConfig, opt.History)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return &LiveSession{ctx, opt, logger, rc, client, session, genContentConfig}, nil
 }
 
 type toolConn interface {
@@ -116,72 +122,6 @@ func (*noToolConn) listTools(bool) ([]genai.FunctionDeclaration, error) {
 	return nil, nil
 }
 
-type remoteCall interface {
-	setLogger(Logger)
-	setDefaultArgsFunc(func() map[string]any)
-	callFunction(string, map[string]any) (map[string]any, error)
-}
-
-var (
-	_ remoteCall = (*panicRemoteCall)(nil)
-	_ remoteCall = (*defaultRemoteCall)(nil)
-)
-
-type panicRemoteCall struct{}
-
-func (*panicRemoteCall) setLogger(Logger) {}
-
-func (*panicRemoteCall) setDefaultArgsFunc(func() map[string]any) {}
-
-func (*panicRemoteCall) callFunction(name string, args map[string]any) (map[string]any, error) {
-	panic(errors.Errorf("not support callFunction: called func=%s args=%v", name, args))
-}
-
-type defaultRemoteCall struct {
-	conn            *Conn
-	logger          Logger
-	defaultArgsFunc func() map[string]any
-}
-
-func (d *defaultRemoteCall) setLogger(lg Logger) {
-	d.logger = lg
-}
-
-func (d *defaultRemoteCall) setDefaultArgsFunc(fn func() map[string]any) {
-	d.defaultArgsFunc = fn
-}
-
-func (d *defaultRemoteCall) callFunction(name string, args map[string]any) (map[string]any, error) {
-	if d.logger == nil {
-		d.logger = &stdLogger{log.New(io.Discard, "", 0), false}
-	}
-	if d.defaultArgsFunc != nil {
-		defaultArgs := d.defaultArgsFunc()
-		for k, v := range defaultArgs {
-			if _, ok := args[k]; ok != true {
-				args[k] = v
-			}
-		}
-	}
-
-	d.logger.DebugF("callFunction: %s args=%v", name, args)
-	resp, err := requestWithData(
-		d.conn,
-		tooltopic(name),
-		JSONEncoder[map[string]any](),
-		JSONEncoder[map[string]any](),
-		args,
-	)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	if resp, ok := resp["_error"]; ok {
-		return nil, errors.Errorf("error: %s", resp)
-	}
-	delete(resp, "_error")
-	return resp, nil
-}
-
 type funcallCtx struct {
 	index int
 	name  string
@@ -190,26 +130,23 @@ type funcallCtx struct {
 }
 
 type LiveSession struct {
-	ctx     context.Context
-	opt     *UseOption
-	logger  Logger
-	rc      remoteCall
-	client  *genai.Client
-	session *genai.ChatSession
+	ctx              context.Context
+	opt              *UseOption
+	logger           Logger
+	rc               remoteCall
+	client           *genai.Client
+	session          *genai.Chat
+	genContentConfig *genai.GenerateContentConfig
 }
 
 func (s *LiveSession) JSONOutput() bool {
 	return s.opt.JSONOutput
 }
 
-func (s *LiveSession) Close() error {
-	return s.client.Close()
-}
-
 func (s *LiveSession) SendText(values ...string) (iter.Seq2[string, error], error) {
 	texts := make([]genai.Part, len(values))
 	for i, v := range values {
-		texts[i] = genai.Text(v)
+		texts[i] = genai.Part{Text: v}
 	}
 	resp, err := s.session.SendMessage(s.ctx, texts...)
 	if err != nil {
@@ -221,53 +158,57 @@ func (s *LiveSession) SendText(values ...string) (iter.Seq2[string, error], erro
 func (s *LiveSession) handleMsg(genContentResp *genai.GenerateContentResponse) iter.Seq2[string, error] {
 	return func(yield func(string, error) bool) {
 		generate := func(resp *genai.GenerateContentResponse) (*genai.GenerateContentResponse, error) {
+			calls := resp.FunctionCalls()
 			wg := new(sync.WaitGroup)
-			ret := make(chan funcallCtx, len(resp.Candidates[0].FunctionCalls()))
+			ret := make(chan funcallCtx, len(calls))
 
-			i := 0
-			for _, p := range resp.Candidates[0].Content.Parts {
-				switch v := p.(type) {
-				case genai.Text:
-					if yield(string(v), nil) != true {
-						return endContent(), nil
+			for i, fc := range calls {
+				wg.Add(1)
+				go func(index int, funcall *genai.FunctionCall) {
+					defer wg.Done()
+
+					r, err := s.rc.callFunction(funcall.Name, funcall.Args)
+					if err != nil {
+						err = errors.Wrapf(err, "name=%s, args=%v", funcall.Name, funcall.Args)
 					}
-				case genai.FunctionCall:
-					wg.Add(1)
-					go func(i int, funcall genai.FunctionCall) {
-						defer wg.Done()
-
-						r, err := s.rc.callFunction(funcall.Name, funcall.Args)
-						if err != nil {
-							err = errors.Wrapf(err, "name=%s, args=%v", funcall.Name, funcall.Args)
-						}
-						ret <- funcallCtx{
-							i,
-							funcall.Name,
-							r,
-							err,
-						}
-					}(i, v)
-					i += 1
-				}
+					ret <- funcallCtx{
+						index,
+						funcall.Name,
+						r,
+						err,
+					}
+				}(i, fc)
 			}
 			wg.Wait()
 			close(ret)
 
-			funcResults := make([]genai.Part, i)
+			for _, p := range resp.Candidates[0].Content.Parts {
+				if p.Text != "" {
+					if yield(p.Text, nil) != true {
+						return endContent(), nil
+					}
+				}
+			}
+
+			funcResults := make([]genai.Part, len(calls))
 			for r := range ret {
 				if r.err != nil {
 					yield("", errors.WithStack(r.err))
 					return nil, errors.WithStack(r.err)
 				}
-				funcResults[r.index] = &genai.FunctionResponse{
-					Name:     r.name,
-					Response: r.resp,
+				funcResults[r.index] = genai.Part{
+					FunctionResponse: &genai.FunctionResponse{
+						Name:     r.name,
+						Response: r.resp,
+					},
 				}
 			}
 			if len(funcResults) < 1 {
 				return endContent(), nil
 			}
 
+			// currently does not work in google.golang.org/genai
+			// Errors are: Unable to submit request because it must include at least one parts field, which describes the prompt input.
 			resp2, err := s.session.SendMessage(s.ctx, funcResults...)
 			if err != nil {
 				err = errors.WithStack(err)

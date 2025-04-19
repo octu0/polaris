@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"cloud.google.com/go/vertexai/genai"
+	"google.golang.org/genai"
 )
 
 func TestNullableType(t *testing.T) {
@@ -143,7 +143,7 @@ func TestObject(t *testing.T) {
 		if schema.Description != "Test object" {
 			tt.Errorf("Object.Schema().Description = %v, want %v", schema.Description, "Test object")
 		}
-		if schema.Nullable != false {
+		if *schema.Nullable != false {
 			tt.Errorf("Object.Schema().Nullable = %v, want %v", schema.Nullable, false)
 		}
 
@@ -202,7 +202,7 @@ func TestArray(t *testing.T) {
 		if schema.Description != "Test array" {
 			tt.Errorf("Array.Schema().Description = %v, want %v", schema.Description, "Test array")
 		}
-		if schema.Nullable != false {
+		if *schema.Nullable != false {
 			tt.Errorf("Array.Schema().Nullable = %v, want %v", schema.Nullable, false)
 		}
 		if schema.Items.Type != genai.TypeString {
@@ -230,7 +230,7 @@ func TestIntArray(t *testing.T) {
 		if schema.Description != "Test int array" {
 			tt.Errorf("IntArray.Schema().Description = %v, want %v", schema.Description, "Test int array")
 		}
-		if schema.Nullable != false {
+		if *schema.Nullable != false {
 			tt.Errorf("IntArray.Schema().Nullable = %v, want %v", schema.Nullable, false)
 		}
 		if schema.Items.Type != genai.TypeInteger {
@@ -258,7 +258,7 @@ func TestFloatArray(t *testing.T) {
 		if schema.Description != "Test float array" {
 			tt.Errorf("FloatArray.Schema().Description = %v, want %v", schema.Description, "Test float array")
 		}
-		if schema.Nullable != false {
+		if *schema.Nullable != false {
 			tt.Errorf("FloatArray.Schema().Nullable = %v, want %v", schema.Nullable, false)
 		}
 		if schema.Items.Type != genai.TypeNumber {
@@ -286,7 +286,7 @@ func TestStringArray(t *testing.T) {
 		if schema.Description != "Test string array" {
 			tt.Errorf("StringArray.Schema().Description = %v, want %v", schema.Description, "Test string array")
 		}
-		if schema.Nullable != false {
+		if *schema.Nullable != false {
 			tt.Errorf("StringArray.Schema().Nullable = %v, want %v", schema.Nullable, false)
 		}
 		if schema.Items.Type != genai.TypeString {
@@ -314,7 +314,7 @@ func TestBoolArray(t *testing.T) {
 		if schema.Description != "Test bool array" {
 			tt.Errorf("BoolArray.Schema().Description = %v, want %v", schema.Description, "Test bool array")
 		}
-		if schema.Nullable != false {
+		if *schema.Nullable != false {
 			tt.Errorf("BoolArray.Schema().Nullable = %v, want %v", schema.Nullable, false)
 		}
 		if schema.Items.Type != genai.TypeBoolean {
@@ -352,7 +352,7 @@ func TestObjectArray(t *testing.T) {
 		if schema.Description != "Test object array" {
 			tt.Errorf("ObjectArray.Schema().Description = %v, want %v", schema.Description, "Test object array")
 		}
-		if schema.Nullable != false {
+		if *schema.Nullable != false {
 			tt.Errorf("ObjectArray.Schema().Nullable = %v, want %v", schema.Nullable, false)
 		}
 		if schema.Items.Type != genai.TypeObject {
@@ -400,7 +400,7 @@ func TestIntEnum(t *testing.T) {
 		if schema.Description != "Test int enum" {
 			tt.Errorf("IntEnum.Schema().Description = %v, want %v", schema.Description, "Test int enum")
 		}
-		if schema.Nullable != false {
+		if *schema.Nullable != false {
 			tt.Errorf("IntEnum.Schema().Nullable = %v, want %v", schema.Nullable, false)
 		}
 		if schema.Format != "enum" {
@@ -430,7 +430,7 @@ func TestStringEnum(t *testing.T) {
 		if schema.Description != "Test string enum" {
 			tt.Errorf("StringEnum.Schema().Description = %v, want %v", schema.Description, "Test string enum")
 		}
-		if schema.Nullable != false {
+		if *schema.Nullable != false {
 			tt.Errorf("StringEnum.Schema().Nullable = %v, want %v", schema.Nullable, false)
 		}
 		if schema.Format != "enum" {
@@ -460,7 +460,7 @@ func TestInt(t *testing.T) {
 		if schema.Description != "Test int" {
 			tt.Errorf("Int.Schema().Description = %v, want %v", schema.Description, "Test int")
 		}
-		if schema.Nullable != false {
+		if *schema.Nullable != false {
 			tt.Errorf("Int.Schema().Nullable = %v, want %v", schema.Nullable, false)
 		}
 	})
@@ -482,7 +482,7 @@ func TestFloat(t *testing.T) {
 		if schema.Description != "Test float" {
 			tt.Errorf("Float.Schema().Description = %v, want %v", schema.Description, "Test float")
 		}
-		if schema.Nullable != false {
+		if *schema.Nullable != false {
 			tt.Errorf("Float.Schema().Nullable = %v, want %v", schema.Nullable, false)
 		}
 	})
@@ -504,7 +504,7 @@ func TestString(t *testing.T) {
 		if schema.Description != "Test string" {
 			tt.Errorf("String.Schema().Description = %v, want %v", schema.Description, "Test string")
 		}
-		if schema.Nullable != false {
+		if *schema.Nullable != false {
 			tt.Errorf("String.Schema().Nullable = %v, want %v", schema.Nullable, false)
 		}
 	})
@@ -526,7 +526,7 @@ func TestBool(t *testing.T) {
 		if schema.Description != "Test bool" {
 			tt.Errorf("Bool.Schema().Description = %v, want %v", schema.Description, "Test bool")
 		}
-		if schema.Nullable != false {
+		if *schema.Nullable != false {
 			tt.Errorf("Bool.Schema().Nullable = %v, want %v", schema.Nullable, false)
 		}
 	})

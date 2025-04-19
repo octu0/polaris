@@ -31,7 +31,7 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create AI session: %v", err))
 	}
-	defer session.Close()
+
 	fmt.Println("AI session created.")
 
 	// Define the prompt for the AI, asking it to use a tool potentially hosted on a remote agent

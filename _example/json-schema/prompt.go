@@ -31,7 +31,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer session.Close()
 
 	prompt := `
 		execute this task:

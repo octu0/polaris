@@ -255,7 +255,7 @@ func main() {
     if err != nil {
         panic(fmt.Sprintf("Failed to create AI session: %v", err))
     }
-    defer session.Close()
+
     fmt.Println("AI session created.")
 
     // Define the prompt for the AI, asking it to use a tool potentially hosted on a remote agent
@@ -350,6 +350,7 @@ Using `polaris`, AI orchestration capabilities, requires bellow:
     * **Environment Variables:**
         * `GOOGLE_APPLICATION_CREDENTIALS`: Set this to the path of your service account key JSON file.
         * `GOOGLE_CLOUD_PROJECT`: Set this to your Google Cloud Project ID. 
+        * `GOOGLE_CLOUD_LOCATION`: Set this to your Google Cloud Project location/region
 
 # License
 
