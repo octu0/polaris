@@ -2,9 +2,10 @@ go 1.23.7
 
 use (
     ./
+    ./_example/remote-log
     ./_example/multi-tool
     ./_example/json-schema
-    ./_example/remote-log
+    ./_example/agent-schema
     ./_example/error-tool
     ./_example/mcp-tool
 )
