@@ -321,14 +321,6 @@ type Conn struct {
 	logger     Logger
 }
 
-func (c *Conn) NewConnection() (*Conn, error) {
-	nc, err := c.natsOpt.Connect()
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	return newConn(c.natsOpt, c.opt, nc), nil
-}
-
 func (c *Conn) Close() {
 	c.cancel()
 	for _, sub := range c.subs {
@@ -497,6 +489,11 @@ func (c *Conn) Use(ctx context.Context, options ...UseOptionFunc) (Session, erro
 }
 
 func (c *Conn) Call(ctx context.Context, name string, req Req) (Resp, error) {
+	if localTool, ok := c.Tool(name); ok {
+		ret := handleToolCall(localTool)(req)
+		return Resp(ret), nil
+	}
+
 	rc := &defaultRemoteCall{c, nil, nil}
 	ret, err := rc.callFunction(name, req.ToMap())
 	if err != nil {

@@ -28,6 +28,9 @@ func main() {
 	if err := registerFortuneAgent(ctx, conn); err != nil {
 		panic(err)
 	}
+	if err := registerCurrentDate(ctx, conn); err != nil {
+		panic(err)
+	}
 
 	<-ctx.Done()
 }
@@ -74,6 +77,11 @@ func registerWeatherAgent(ctx context.Context, conn *polaris.Conn) error {
 				return errors.WithStack(err)
 			}
 
+			currDate, err := conn.Call(ctx, "getCurrentDate", polaris.Req{})
+			if err != nil {
+				return errors.WithStack(err)
+			}
+
 			prompt := fmt.Sprintf(`
 				Specify the City name and Month, making the weather information
 
@@ -81,7 +89,7 @@ func registerWeatherAgent(ctx context.Context, conn *polaris.Conn) error {
 				%s
 				Month:
 				%s
-			`, c.String("cityName"), time.Now().Month().String())
+			`, c.String("cityName"), currDate.String("month", ""))
 
 			resp, err := gen(prompt)
 			if err != nil {
@@ -133,6 +141,40 @@ func registerFortuneAgent(ctx context.Context, conn *polaris.Conn) error {
 			}
 
 			c.Set(resp)
+			return nil
+		},
+	})
+}
+
+func registerCurrentDate(ctx context.Context, conn *polaris.Conn) error {
+	return conn.RegisterTool(polaris.Tool{
+		Name:        "getCurrentDate",
+		Description: "get current date",
+		Parameters:  polaris.Object{},
+		Response: polaris.Object{
+			Properties: polaris.Properties{
+				"year": polaris.String{
+					Description: "current year",
+					Required:    true,
+				},
+				"month": polaris.String{
+					Description: "current month",
+					Required:    true,
+				},
+				"day": polaris.String{
+					Description: "current day",
+					Required:    true,
+				},
+			},
+		},
+		Handler: func(c *polaris.Ctx) error {
+			log.Printf("function call: getCurrentDate")
+			now := time.Now()
+			c.Set(polaris.Resp{
+				"year":  fmt.Sprintf("%d", now.Year()),
+				"month": now.Month().String(),
+				"day":   fmt.Sprintf("%d", now.Day()),
+			})
 			return nil
 		},
 	})
