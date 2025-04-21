@@ -12,29 +12,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-func main() {
-	conn, err := polaris.Connect(polaris.ConnectAddress("127.0.0.1", "4222"))
-	if err != nil {
-		panic(err)
-	}
-	defer conn.Close()
-
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
-	defer cancel()
-
-	if err := registerWeatherAgent(ctx, conn); err != nil {
-		panic(err)
-	}
-	if err := registerFortuneAgent(ctx, conn); err != nil {
-		panic(err)
-	}
-	if err := registerCurrentDate(ctx, conn); err != nil {
-		panic(err)
-	}
-
-	<-ctx.Done()
-}
-
 func registerWeatherAgent(ctx context.Context, conn *polaris.Conn) error {
 	toolName := "getWeather"
 	return conn.RegisterTool(polaris.Tool{
@@ -63,14 +40,14 @@ func registerWeatherAgent(ctx context.Context, conn *polaris.Conn) error {
 		},
 		Handler: func(c *polaris.Ctx) error {
 			log.Printf("function call: %s", toolName)
-			t, _ := conn.Tool(toolName)
+			myTool, _ := conn.Tool(toolName)
 			gen, err := polaris.GenerateJSON(
 				ctx,
 				polaris.UseModel("gemini-2.5-pro-exp-03-25"),
 				polaris.UseSystemInstruction(
 					polaris.AddTextSystemInstruction("Output must be in Japanese."),
 				),
-				polaris.UseJSONOutput(t.Response),
+				polaris.UseJSONOutput(myTool.Response),
 				polaris.UseTemperature(0.5),
 			)
 			if err != nil {
@@ -131,6 +108,7 @@ func registerFortuneAgent(ctx context.Context, conn *polaris.Conn) error {
 			if err != nil {
 				return errors.WithStack(err)
 			}
+
 			resp, err := gen(`
 				Perform a simple, omikuji-style fortune telling for today.
 				Give a rndom luck level ('Great luck', 'Good luck', 'Small luck') and a short positive message.
@@ -178,4 +156,27 @@ func registerCurrentDate(ctx context.Context, conn *polaris.Conn) error {
 			return nil
 		},
 	})
+}
+
+func main() {
+	conn, err := polaris.Connect(polaris.ConnectAddress("127.0.0.1", "4222"))
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer cancel()
+
+	if err := registerWeatherAgent(ctx, conn); err != nil {
+		panic(err)
+	}
+	if err := registerFortuneAgent(ctx, conn); err != nil {
+		panic(err)
+	}
+	if err := registerCurrentDate(ctx, conn); err != nil {
+		panic(err)
+	}
+
+	<-ctx.Done()
 }
