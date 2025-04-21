@@ -14,9 +14,9 @@ import (
 
 const (
 	TopicRegisterTool   string = "polaris:tool:register"
-	TopicUnregisterTool        = "polaris:tool:unregister"
-	TopicToolKeepalive         = "polaris:tool:keepalive"
-	TopicListTool              = "polaris:tool:list"
+	TopicUnregisterTool string = "polaris:tool:unregister"
+	TopicToolKeepalive  string = "polaris:tool:keepalive"
+	TopicListTool       string = "polaris:tool:list"
 )
 
 type toolDeclareWithDeadline struct {

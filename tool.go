@@ -6,7 +6,7 @@ type NullableType string
 
 const (
 	NullableYes NullableType = "yes"
-	NullableNo               = "no"
+	NullableNo  NullableType = "no"
 )
 
 func (n NullableType) Nullable() bool {
