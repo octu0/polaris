@@ -9,7 +9,8 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/octu0/polaris)](https://goreportcard.com/report/github.com/octu0/polaris)
 [![Releases](https://img.shields.io/github/v/release/octu0/polaris)](https://github.com/octu0/polaris/releases)
 
-`polaris` is a Go framework for building **distributed AI agents**.  
+`polaris` is a Go framework for building **distributed AI agents**.
+
 These agents run as lightweight sidecars alongside your applications, securely exposing system capabilities and local resources (like logs or metrics) via **Function Calling**. This enables AI models (such as Google's Vertex AI Gemini) to intelligently interact with your distributed infrastructure through a unified polaris interface, simplifying complex coordination. The framework is designed for **parallel execution** to handle demanding workloads.
 
 ## Why `polaris` ?
@@ -20,7 +21,8 @@ Building robust server-side Function Calling, especially in distributed systems,
 - **Coordination Difficulties:** Orchestrating interactions between services (RPC) often requires complex transport logic and boilerplate code.
 - **Integration Friction:** Adding Function Calling capabilities to existing services can demand substantial code modifications.
 
-`polaris` is a distributed AI agent framework designed to simplify this.  
+`polaris` is a distributed AI agent framework designed to simplify this.
+
 It offers a novel approach focused on ease of use and intelligent coordination:
 
 - **Centralized `registry` Cluster:** Provides a highly available, central point for managing function schemas and discovering services, eliminating synchronization headaches.
