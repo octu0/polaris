@@ -71,13 +71,12 @@ conn.RegisterTool(polaris.Tool{
             },
         },
     },
-    Handler: func(ctx *polaris.Ctx) error {
-        a := ctx.Int("a")
-        b := ctx.Int("b")
-        ctx.Set(polaris.Resp{
+    Handler: func(r *polaris.ReqCtx) (polaris.Resp, error) {
+        a := r.Int("a")
+        b := r.Int("b")
+        return polaris.Resp{
             "result": a + b,
-        })
-        return nil
+        }, nil
     },
 })
 ```
@@ -114,18 +113,17 @@ conn.RegisterTool(polaris.Tool{
             },
         },
     },
-    Handler: func(ctx *polaris.Ctx) error {
-        a := ctx.Int("a")
-        b := ctx.Int("b")
-        ctx.Set(polaris.Resp{
+    Handler: func(r *polaris.ReqCtx) (polaris.Resp, error) {
+        a := r.Int("a")
+        b := r.Int("b")
+        return polaris.Resp{
             "result": a * b,
-        })
-        return nil
+        }, nil
     },
 })
 ```
 
-### 4. Client Application (`main.go`)
+### 4. Client Application (`client.go`)
 
 The client application connects to the registry, creates a session with the AI model, and sends a prompt that instructs the agent to use both tools in sequence:
 
@@ -180,7 +178,7 @@ $ go run calcB.go
 4. In another terminal, run the client:
 
 ```shell
-$ go run main.go
+$ go run client.go
 ```
 
 ## Expected Output

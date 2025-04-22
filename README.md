@@ -186,8 +186,8 @@ func registerLogReaderAgent(conn *polaris.Conn, logFilePath string) error {
             },
         },
         // The handler function implements the tool's logic
-        Handler: func(ctx *polaris.Ctx) error {
-            linesToRead := ctx.Int("lines")
+        Handler: func(r *polaris.ReqCtx) error {
+            linesToRead := r.Int("lines")
             if linesToRead <= 0 {
                 linesToRead = 10 // Use default if invalid
             }
@@ -205,7 +205,7 @@ func registerLogReaderAgent(conn *polaris.Conn, logFilePath string) error {
             // Dummy content for example:
             content := fmt.Sprintf("Read last %d lines of %s (implementation pending)", linesToRead, logFilePath)
 
-            ctx.Set(polaris.Resp{
+            r.Set(polaris.Resp{
                 "log_content": content,
             })
             return nil // Return nil on success

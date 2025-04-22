@@ -8,4 +8,5 @@ use (
     ./_example/agent-schema
     ./_example/error-tool
     ./_example/mcp-tool
+    ./_example/clustering
 )

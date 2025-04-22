@@ -46,8 +46,8 @@ func main() {
 				},
 			},
 		},
-		Handler: func(ctx *polaris.Ctx) error {
-			return fmt.Errorf("!!!this function does not support!!! args=%v", ctx.Req())
+		Handler: func(r *polaris.ReqCtx) (polaris.Resp, error) {
+			return nil, fmt.Errorf("!!!this function does not support!!! args=%v", r.Req())
 		},
 		ErrorHandler: func(err error) {
 			log.Printf("error: %+v", err)

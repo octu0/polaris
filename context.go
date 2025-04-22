@@ -4,13 +4,13 @@ import (
 	"cloud.google.com/go/vertexai/genai"
 )
 
-type JSONMap map[string]any
+type jsonMap map[string]any
 type (
-	Req  = JSONMap
-	Resp = JSONMap
+	Req  = jsonMap
+	Resp = jsonMap
 )
 
-func (m JSONMap) Int(key string, defaultValue int) int {
+func (m jsonMap) Int(key string, defaultValue int) int {
 	if v, ok := m[key].(int); ok {
 		return v
 	}
@@ -20,14 +20,14 @@ func (m JSONMap) Int(key string, defaultValue int) int {
 	return defaultValue
 }
 
-func (m JSONMap) String(key string, defaultValue string) string {
+func (m jsonMap) String(key string, defaultValue string) string {
 	if v, ok := m[key].(string); ok {
 		return v
 	}
 	return defaultValue
 }
 
-func (m JSONMap) Bool(key string, defaultValue bool) bool {
+func (m jsonMap) Bool(key string, defaultValue bool) bool {
 	if v, ok := m[key].(bool); ok {
 		return v
 	}
@@ -42,7 +42,7 @@ func (m JSONMap) Bool(key string, defaultValue bool) bool {
 	return defaultValue
 }
 
-func (m JSONMap) Float64(key string, defaultValue float64) float64 {
+func (m jsonMap) Float64(key string, defaultValue float64) float64 {
 	if v, ok := m[key].(float64); ok {
 		return v
 	}
@@ -52,7 +52,7 @@ func (m JSONMap) Float64(key string, defaultValue float64) float64 {
 	return defaultValue
 }
 
-func (m JSONMap) IntArray(key string, defaultValue []int) []int {
+func (m jsonMap) IntArray(key string, defaultValue []int) []int {
 	if v, ok := m[key].([]any); ok {
 		ret := make([]int, len(v))
 		for i, vv := range v {
@@ -65,7 +65,7 @@ func (m JSONMap) IntArray(key string, defaultValue []int) []int {
 	return defaultValue
 }
 
-func (m JSONMap) Float64Array(key string, defaultValue []float64) []float64 {
+func (m jsonMap) Float64Array(key string, defaultValue []float64) []float64 {
 	if v, ok := m[key].([]any); ok {
 		ret := make([]float64, len(v))
 		for i, vv := range v {
@@ -78,7 +78,7 @@ func (m JSONMap) Float64Array(key string, defaultValue []float64) []float64 {
 	return defaultValue
 }
 
-func (m JSONMap) StringArray(key string, defaultValue []string) []string {
+func (m jsonMap) StringArray(key string, defaultValue []string) []string {
 	if v, ok := m[key].([]any); ok {
 		ret := make([]string, len(v))
 		for i, vv := range v {
@@ -91,11 +91,11 @@ func (m JSONMap) StringArray(key string, defaultValue []string) []string {
 	return defaultValue
 }
 
-func (m JSONMap) ObjectArray(key string, defaultValue []JSONMap) []JSONMap {
+func (m jsonMap) ObjectArray(key string, defaultValue []jsonMap) []jsonMap {
 	if v, ok := m[key].([]any); ok {
-		ret := make([]JSONMap, len(v))
+		ret := make([]jsonMap, len(v))
 		for i, o := range v {
-			r := JSONMap{}
+			r := jsonMap{}
 			if kv, ok := o.(map[string]any); ok {
 				for k, a := range kv {
 					r.Set(k, a)
@@ -108,9 +108,9 @@ func (m JSONMap) ObjectArray(key string, defaultValue []JSONMap) []JSONMap {
 	return defaultValue
 }
 
-func (m JSONMap) Object(key string, defaultValue JSONMap) JSONMap {
+func (m jsonMap) Object(key string, defaultValue jsonMap) jsonMap {
 	if v, ok := m[key].(map[string]any); ok {
-		ret := make(JSONMap, len(v))
+		ret := make(jsonMap, len(v))
 		for k, a := range v {
 			ret.Set(k, a)
 		}
@@ -119,9 +119,9 @@ func (m JSONMap) Object(key string, defaultValue JSONMap) JSONMap {
 	return defaultValue
 }
 
-func (m JSONMap) Array(key string, defaultValue []JSONMap) []JSONMap {
+func (m jsonMap) Array(key string, defaultValue []jsonMap) []jsonMap {
 	if v, ok := m[key].([]any); ok {
-		ret := make([]JSONMap, len(v))
+		ret := make([]jsonMap, len(v))
 		for i, vv := range v {
 			if mm, isMap := vv.(map[string]any); isMap {
 				ret[i] = mm
@@ -132,7 +132,7 @@ func (m JSONMap) Array(key string, defaultValue []JSONMap) []JSONMap {
 	return defaultValue
 }
 
-func (m JSONMap) Set(key string, value any) {
+func (m jsonMap) Set(key string, value any) {
 	switch v := value.(type) {
 	case []map[string]any:
 		// [{"key": "value"},...] is not of the form []map[string]any
@@ -165,21 +165,20 @@ func (m JSONMap) Set(key string, value any) {
 	}
 }
 
-func (m JSONMap) ToMap() map[string]any {
-	ret := JSONMap(make(map[string]any, len(m)))
+func (m jsonMap) ToMap() map[string]any {
+	ret := jsonMap(make(map[string]any, len(m)))
 	for key, value := range m {
 		ret.Set(key, value)
 	}
 	return map[string]any(ret)
 }
 
-type Ctx struct {
-	req         JSONMap
+type ReqCtx struct {
+	req         jsonMap
 	paramSchema Object
-	resp        *JSONMap
 }
 
-func (c *Ctx) Int(key string) int {
+func (c *ReqCtx) Int(key string) int {
 	t := c.paramSchema.Properties[key]
 	if tt, ok := t.(Int); ok {
 		return c.req.Int(key, tt.Default)
@@ -190,7 +189,7 @@ func (c *Ctx) Int(key string) int {
 	return c.req.Int(key, 0)
 }
 
-func (c *Ctx) Float64(key string) float64 {
+func (c *ReqCtx) Float64(key string) float64 {
 	t := c.paramSchema.Properties[key]
 	if tt, ok := t.(Float); ok {
 		return c.req.Float64(key, tt.Default)
@@ -198,7 +197,7 @@ func (c *Ctx) Float64(key string) float64 {
 	return c.req.Float64(key, 0.0)
 }
 
-func (c *Ctx) String(key string) string {
+func (c *ReqCtx) String(key string) string {
 	t := c.paramSchema.Properties[key]
 	if tt, ok := t.(String); ok {
 		return c.req.String(key, tt.Default)
@@ -209,7 +208,7 @@ func (c *Ctx) String(key string) string {
 	return c.req.String(key, "")
 }
 
-func (c *Ctx) Bool(key string) bool {
+func (c *ReqCtx) Bool(key string) bool {
 	t := c.paramSchema.Properties[key]
 	if tt, ok := t.(Bool); ok {
 		return c.req.Bool(key, tt.Default)
@@ -217,7 +216,7 @@ func (c *Ctx) Bool(key string) bool {
 	return c.req.Bool(key, false)
 }
 
-func (c *Ctx) IntArray(key string) []int {
+func (c *ReqCtx) IntArray(key string) []int {
 	t := c.paramSchema.Properties[key]
 	if _, ok := t.(IntArray); ok {
 		return c.req.IntArray(key, []int{})
@@ -230,7 +229,7 @@ func (c *Ctx) IntArray(key string) []int {
 	return c.req.IntArray(key, []int{})
 }
 
-func (c *Ctx) FloatArray(key string) []float64 {
+func (c *ReqCtx) FloatArray(key string) []float64 {
 	t := c.paramSchema.Properties[key]
 	if _, ok := t.(FloatArray); ok {
 		return c.req.Float64Array(key, []float64{})
@@ -243,7 +242,7 @@ func (c *Ctx) FloatArray(key string) []float64 {
 	return c.req.Float64Array(key, []float64{})
 }
 
-func (c *Ctx) StringArray(key string) []string {
+func (c *ReqCtx) StringArray(key string) []string {
 	t := c.paramSchema.Properties[key]
 	if _, ok := t.(StringArray); ok {
 		return c.req.StringArray(key, []string{})
@@ -256,44 +255,31 @@ func (c *Ctx) StringArray(key string) []string {
 	return c.req.StringArray(key, []string{})
 }
 
-func (c *Ctx) Object(key string) *Ctx {
+func (c *ReqCtx) Object(key string) *ReqCtx {
 	t := c.paramSchema.Properties[key]
 	if obj, ok := t.(Object); ok {
-		r := JSONMap{}
-		c.resp.Set(key, r)
-		return &Ctx{c.req.Object(key, JSONMap{}), obj, &r}
+		return &ReqCtx{c.req.Object(key, jsonMap{}), obj}
 	}
 	return nil
 }
 
-func (c *Ctx) ObjectArray(key string) []*Ctx {
+func (c *ReqCtx) ObjectArray(key string) []*ReqCtx {
 	t := c.paramSchema.Properties[key]
 	if oa, ok := t.(ObjectArray); ok {
-		data := c.req.ObjectArray(key, []JSONMap{})
+		data := c.req.ObjectArray(key, []jsonMap{})
 		if len(data) < 1 {
 			return nil
 		}
 
-		respMap := make([]JSONMap, len(data))
-		for i := range respMap {
-			respMap[i] = JSONMap{}
-		}
-		c.resp.Set(key, respMap)
-		ret := make([]*Ctx, len(data))
+		ret := make([]*ReqCtx, len(data))
 		for i, jsonMap := range data {
-			ret[i] = &Ctx{jsonMap, Object{Properties: oa.Items}, &respMap[i]}
+			ret[i] = &ReqCtx{jsonMap, Object{Properties: oa.Items}}
 		}
 		return ret
 	}
 	return nil
 }
 
-func (c *Ctx) Set(r Resp) {
-	for k, v := range r {
-		c.resp.Set(k, v)
-	}
-}
-
-func (c *Ctx) Req() Req {
+func (c *ReqCtx) Req() Req {
 	return c.req
 }

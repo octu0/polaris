@@ -50,14 +50,13 @@ func main() {
 				},
 			},
 		},
-		Handler: func(ctx *polaris.Ctx) error {
+		Handler: func(r *polaris.ReqCtx) (polaris.Resp, error) {
 			log.Println("function calling calculatorB")
-			a := ctx.Int("a")
-			b := ctx.Int("b")
-			ctx.Set(polaris.Resp{
+			a := r.Int("a")
+			b := r.Int("b")
+			return polaris.Resp{
 				"result": a * b,
-			})
-			return nil
+			}, nil
 		},
 	}); err != nil {
 		panic(err)

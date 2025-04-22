@@ -38,7 +38,7 @@ func registerWeatherAgent(ctx context.Context, conn *polaris.Conn) error {
 				},
 			},
 		},
-		Handler: func(c *polaris.Ctx) error {
+		Handler: func(r *polaris.ReqCtx) (polaris.Resp, error) {
 			log.Printf("function call: %s", toolName)
 			myTool, _ := conn.Tool(toolName)
 			gen, err := polaris.GenerateJSON(
@@ -51,12 +51,12 @@ func registerWeatherAgent(ctx context.Context, conn *polaris.Conn) error {
 				polaris.UseTemperature(0.5),
 			)
 			if err != nil {
-				return errors.WithStack(err)
+				return nil, errors.WithStack(err)
 			}
 
 			currDate, err := conn.Call(ctx, "getCurrentDate", polaris.Req{})
 			if err != nil {
-				return errors.WithStack(err)
+				return nil, errors.WithStack(err)
 			}
 
 			prompt := fmt.Sprintf(`
@@ -66,15 +66,14 @@ func registerWeatherAgent(ctx context.Context, conn *polaris.Conn) error {
 				%s
 				Month:
 				%s
-			`, c.String("cityName"), currDate.String("month", ""))
+			`, r.String("cityName"), currDate.String("month", ""))
 
 			resp, err := gen(prompt)
 			if err != nil {
-				return errors.WithStack(err)
+				return nil, errors.WithStack(err)
 			}
 
-			c.Set(resp)
-			return nil
+			return resp, nil
 		},
 	})
 }
@@ -93,7 +92,7 @@ func registerFortuneAgent(ctx context.Context, conn *polaris.Conn) error {
 				},
 			},
 		},
-		Handler: func(c *polaris.Ctx) error {
+		Handler: func(r *polaris.ReqCtx) (polaris.Resp, error) {
 			log.Printf("function call: %s", toolName)
 			t, _ := conn.Tool(toolName)
 			gen, err := polaris.GenerateJSON(
@@ -106,7 +105,7 @@ func registerFortuneAgent(ctx context.Context, conn *polaris.Conn) error {
 				polaris.UseTemperature(0.5),
 			)
 			if err != nil {
-				return errors.WithStack(err)
+				return nil, errors.WithStack(err)
 			}
 
 			resp, err := gen(`
@@ -115,11 +114,10 @@ func registerFortuneAgent(ctx context.Context, conn *polaris.Conn) error {
 				Make it clear this is just for fun from AI.
 			`)
 			if err != nil {
-				return errors.WithStack(err)
+				return nil, errors.WithStack(err)
 			}
 
-			c.Set(resp)
-			return nil
+			return resp, nil
 		},
 	})
 }
@@ -145,15 +143,14 @@ func registerCurrentDate(ctx context.Context, conn *polaris.Conn) error {
 				},
 			},
 		},
-		Handler: func(c *polaris.Ctx) error {
+		Handler: func(r *polaris.ReqCtx) (polaris.Resp, error) {
 			log.Printf("function call: getCurrentDate")
 			now := time.Now()
-			c.Set(polaris.Resp{
+			return polaris.Resp{
 				"year":  fmt.Sprintf("%d", now.Year()),
 				"month": now.Month().String(),
 				"day":   fmt.Sprintf("%d", now.Day()),
-			})
-			return nil
+			}, nil
 		},
 	})
 }

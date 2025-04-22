@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"os/signal"
-	"syscall"
 
 	"github.com/octu0/polaris"
 )
@@ -41,7 +39,7 @@ func main() {
 	`
 	it, err := session.SendText(prompt)
 	if err != nil {
-		panic(err))
+		panic(err)
 	}
 	for msg, err := range it {
 		if err != nil {

@@ -21,7 +21,7 @@ func (n NullableType) Nullable() bool {
 }
 
 type (
-	ToolHandler  func(*Ctx) error
+	ToolHandler  func(*ReqCtx) (Resp, error)
 	ErrorHandler func(error)
 )
 

@@ -10,15 +10,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-func handleToolCall(t Tool) func(req map[string]any) map[string]any {
+func handleToolCall(t Tool) func(map[string]any) map[string]any {
 	return func(req map[string]any) map[string]any {
-		j := make(JSONMap, len(req))
+		j := make(jsonMap, len(req))
 		for k, v := range req {
 			j.Set(k, v)
 		}
-		resp := Resp{}
-		ctx := Ctx{j, t.Parameters, &resp}
-		if err := t.Handler(&ctx); err != nil {
+
+		resp, err := t.Handler(&ReqCtx{j, t.Parameters})
+		if err != nil {
 			if t.ErrorHandler != nil {
 				t.ErrorHandler(err)
 			}
@@ -30,7 +30,7 @@ func handleToolCall(t Tool) func(req map[string]any) map[string]any {
 	}
 }
 
-func handleMCPToolCall(ctx context.Context, client *client.Client, t Tool) func(req map[string]any) map[string]any {
+func handleMCPToolCall(ctx context.Context, client *client.Client, t Tool) func(map[string]any) map[string]any {
 	return func(req map[string]any) map[string]any {
 		r := mcp.CallToolRequest{}
 		r.Params.Name = t.Name
@@ -51,8 +51,7 @@ func handleMCPToolCall(ctx context.Context, client *client.Client, t Tool) func(
 				texts[i] = tc.Text
 			}
 		}
-		resp := Resp{}
-		resp.Set("results", texts)
+		resp := Resp{"results": texts}
 		return resp.ToMap()
 	}
 }

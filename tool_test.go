@@ -80,7 +80,7 @@ func TestTool(t *testing.T) {
 			Description: "A test tool",
 			Parameters:  params,
 			Response:    response,
-			Handler:     func(ctx *Ctx) error { return nil },
+			Handler:     func(ctx *ReqCtx) (Resp, error) { return nil, nil },
 		}
 
 		want := genai.FunctionDeclaration{

@@ -1,8 +1,76 @@
 package polaris
 
 import (
+	"cloud.google.com/go/vertexai/genai"
+	"github.com/mark3labs/mcp-go/client"
+	"github.com/mark3labs/mcp-go/client/transport"
 	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/pkg/errors"
 )
+
+func (c *Conn) RegisterSSEMCPTools(baseURL string, initReq mcp.InitializeRequest, options ...transport.ClientOption) error {
+	mcpClient, err := client.NewSSEMCPClient(baseURL, options...)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if err := mcpClient.Start(c.ctx); err != nil {
+		return errors.WithStack(err)
+	}
+
+	initResp, err := mcpClient.Initialize(c.ctx, initReq)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	c.logger.Infof("sseMCPClient init=%v", initResp.ServerInfo)
+
+	r, err := mcpClient.ListTools(c.ctx, mcp.ListToolsRequest{})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	tools := make([]Tool, 0)
+	for _, t := range r.Tools {
+		tools = append(tools, Tool{
+			Name:        t.Name,
+			Description: t.Description,
+			Parameters:  convertInputSchema(t.InputSchema),
+			Response:    Object{},
+		})
+	}
+
+	for _, t := range tools {
+		if err := subscribeReqResp(
+			c,
+			tooltopic(t.Name),
+			JSONEncoder[map[string]any](),
+			JSONEncoder[map[string]any](),
+			handleMCPToolCall(c.ctx, mcpClient, t),
+		); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+
+	for _, t := range tools {
+		resp, err := requestWithData(
+			c,
+			TopicRegisterTool,
+			GobEncoder[genai.FunctionDeclaration](),
+			GobEncoder[RespError](),
+			t.FunctionDeclaration(),
+		)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		if err := resp.Err(); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+
+	c.tools = append(c.tools, tools...)
+	c.mcpClients = append(c.mcpClients, mcpClient)
+	return nil
+}
 
 func primitiveToTypeDef(schema map[string]any, isRequired bool) TypeDef {
 	propertyDesc, ok := schema["description"].(string)

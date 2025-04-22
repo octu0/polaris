@@ -52,8 +52,8 @@ conn.RegisterTool(polaris.Tool{
     Response: polaris.Object{
         // Response definition...
     },
-    Handler: func(ctx *polaris.Ctx) error {
-        return fmt.Errorf("!!!this function does not support!!! args=%v", ctx.Req())
+    Handler: func(r *polaris.ReqCtx) (polaris.Resp, error) {
+        return nil, fmt.Errorf("!!!this function does not support!!! args=%v", r.Req())
     },
     ErrorHandler: func(err error) {
         log.Printf("error: %+v", err)
@@ -61,7 +61,7 @@ conn.RegisterTool(polaris.Tool{
 })
 ```
 
-### 3. Client Application (`main.go`)
+### 3. Client Application (`client.go`)
 
 The client application connects to the registry, creates a session with the AI model, and sends a prompt that attempts to use the calculator tool:
 
@@ -119,7 +119,7 @@ $ go run tool.go
 
 4. In another terminal, run the client:
 ```shell
-$ go run main.go
+$ go run client.go
 ```
 
 ## Expected Behavior

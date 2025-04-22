@@ -8,10 +8,10 @@ func TestCtxObjectArray(t *testing.T) {
 	tests := []struct {
 		name        string
 		paramSchema Object
-		req         JSONMap
+		req         jsonMap
 		key         string
 		wantLen     int
-		checkValues func(t *testing.T, ctxs []*Ctx)
+		checkValues func(t *testing.T, rs []*ReqCtx)
 	}{
 		{
 			name: "Get ObjectArray parameter",
@@ -34,7 +34,7 @@ func TestCtxObjectArray(t *testing.T) {
 					},
 				},
 			},
-			req: JSONMap{
+			req: jsonMap{
 				"users": []any{
 					map[string]any{
 						"name": "Tanaka",
@@ -48,7 +48,7 @@ func TestCtxObjectArray(t *testing.T) {
 			},
 			key:     "users",
 			wantLen: 2,
-			checkValues: func(t *testing.T, ctxs []*Ctx) {
+			checkValues: func(t *testing.T, ctxs []*ReqCtx) {
 				if len(ctxs) != 2 {
 					t.Fatalf("Expected 2 contexts, got %d", len(ctxs))
 				}
@@ -91,10 +91,10 @@ func TestCtxObjectArray(t *testing.T) {
 					},
 				},
 			},
-			req:     JSONMap{},
+			req:     jsonMap{},
 			key:     "users",
 			wantLen: 0,
-			checkValues: func(t *testing.T, ctxs []*Ctx) {
+			checkValues: func(t *testing.T, ctxs []*ReqCtx) {
 				if len(ctxs) != 0 {
 					t.Errorf("Expected empty context array, got %d items", len(ctxs))
 				}
@@ -121,12 +121,12 @@ func TestCtxObjectArray(t *testing.T) {
 					},
 				},
 			},
-			req: JSONMap{
+			req: jsonMap{
 				"users": "invalid value",
 			},
 			key:     "users",
 			wantLen: 0,
-			checkValues: func(t *testing.T, ctxs []*Ctx) {
+			checkValues: func(t *testing.T, ctxs []*ReqCtx) {
 				if len(ctxs) != 0 {
 					t.Errorf("Expected empty context array, got %d items", len(ctxs))
 				}
@@ -136,14 +136,12 @@ func TestCtxObjectArray(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp := JSONMap{}
-			ctx := &Ctx{
+			r := &ReqCtx{
 				req:         tt.req,
 				paramSchema: tt.paramSchema,
-				resp:        &resp,
 			}
 
-			got := ctx.ObjectArray(tt.key)
+			got := r.ObjectArray(tt.key)
 			if len(got) != tt.wantLen {
 				t.Errorf("Ctx.ObjectArray() length = %d, want %d", len(got), tt.wantLen)
 			}
@@ -158,15 +156,15 @@ func TestCtxObjectArray(t *testing.T) {
 func TestJSONMapObjectArray(t *testing.T) {
 	tests := []struct {
 		name         string
-		jsonMap      JSONMap
+		jsonMap      jsonMap
 		key          string
-		defaultValue []JSONMap
+		defaultValue []jsonMap
 		wantLen      int
-		checkValues  func(t *testing.T, maps []JSONMap)
+		checkValues  func(t *testing.T, maps []jsonMap)
 	}{
 		{
 			name: "Get object array",
-			jsonMap: JSONMap{
+			jsonMap: jsonMap{
 				"items": []any{
 					map[string]any{
 						"id":   1,
@@ -179,9 +177,9 @@ func TestJSONMapObjectArray(t *testing.T) {
 				},
 			},
 			key:          "items",
-			defaultValue: []JSONMap{},
+			defaultValue: []jsonMap{},
 			wantLen:      2,
-			checkValues: func(t *testing.T, maps []JSONMap) {
+			checkValues: func(t *testing.T, maps []jsonMap) {
 				if len(maps) != 2 {
 					t.Fatalf("Expected 2 maps, got %d", len(maps))
 				}
@@ -205,11 +203,11 @@ func TestJSONMapObjectArray(t *testing.T) {
 		},
 		{
 			name:         "Key does not exist",
-			jsonMap:      JSONMap{},
+			jsonMap:      jsonMap{},
 			key:          "items",
-			defaultValue: []JSONMap{{}, {}},
+			defaultValue: []jsonMap{{}, {}},
 			wantLen:      2,
-			checkValues: func(t *testing.T, maps []JSONMap) {
+			checkValues: func(t *testing.T, maps []jsonMap) {
 				if len(maps) != 2 {
 					t.Errorf("Expected 2 maps, got %d", len(maps))
 				}
@@ -217,13 +215,13 @@ func TestJSONMapObjectArray(t *testing.T) {
 		},
 		{
 			name: "Value is not an array",
-			jsonMap: JSONMap{
+			jsonMap: jsonMap{
 				"items": "invalid value",
 			},
 			key:          "items",
-			defaultValue: []JSONMap{{}, {}},
+			defaultValue: []jsonMap{{}, {}},
 			wantLen:      2,
-			checkValues: func(t *testing.T, maps []JSONMap) {
+			checkValues: func(t *testing.T, maps []jsonMap) {
 				if len(maps) != 2 {
 					t.Errorf("Expected 2 maps, got %d", len(maps))
 				}
@@ -231,16 +229,16 @@ func TestJSONMapObjectArray(t *testing.T) {
 		},
 		{
 			name: "Array elements are not objects",
-			jsonMap: JSONMap{
+			jsonMap: jsonMap{
 				"items": []any{
 					"string 1",
 					"string 2",
 				},
 			},
 			key:          "items",
-			defaultValue: []JSONMap{},
+			defaultValue: []jsonMap{},
 			wantLen:      2,
-			checkValues: func(t *testing.T, maps []JSONMap) {
+			checkValues: func(t *testing.T, maps []jsonMap) {
 				if len(maps) != 2 {
 					t.Errorf("Expected 2 maps, got %d", len(maps))
 				}
@@ -255,13 +253,13 @@ func TestJSONMapObjectArray(t *testing.T) {
 		},
 		{
 			name: "Empty array",
-			jsonMap: JSONMap{
+			jsonMap: jsonMap{
 				"items": []any{},
 			},
 			key:          "items",
-			defaultValue: []JSONMap{{}, {}},
+			defaultValue: []jsonMap{{}, {}},
 			wantLen:      0,
-			checkValues: func(t *testing.T, maps []JSONMap) {
+			checkValues: func(t *testing.T, maps []jsonMap) {
 				if len(maps) != 0 {
 					t.Errorf("Expected empty array, got %d items", len(maps))
 				}

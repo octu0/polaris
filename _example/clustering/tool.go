@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os/signal"
 	"syscall"
 
@@ -41,11 +42,11 @@ func registerCalculatorAgent(conn *polaris.Conn) error {
 				},
 			},
 		},
-		Handler: func(ctx *polaris.Ctx) error {
-			fmt.Println("called handler", ctx)
-			operation := ctx.String("operation")
-			a := ctx.Float64("a")
-			b := ctx.Float64("b")
+		Handler: func(r *polaris.ReqCtx) (polaris.Resp, error) {
+			log.Printf("called handler req=%v", r)
+			operation := r.String("operation")
+			a := r.Float64("a")
+			b := r.Float64("b")
 
 			result, err := func() (float64, error) {
 				switch operation {
@@ -65,13 +66,12 @@ func registerCalculatorAgent(conn *polaris.Conn) error {
 				}
 			}()
 			if err != nil {
-				return errors.WithStack(err)
+				return nil, errors.WithStack(err)
 			}
 
-			ctx.Set(polaris.Resp{
+			return polaris.Resp{
 				"result": result,
-			})
-			return nil
+			}, nil
 		},
 	})
 }

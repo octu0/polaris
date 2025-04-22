@@ -133,7 +133,7 @@ conn.RegisterTool(polaris.Tool{
             },
         },
     },
-    Handler: func(c *polaris.Ctx) error {
+    Handler: func(r *polaris.ReqCtx) (polaris.Resp, error) {
         // Handler implementation
     },
 })

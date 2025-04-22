@@ -63,18 +63,17 @@ conn.RegisterTool(polaris.Tool{
             },
         },
     },
-    Handler: func(ctx *polaris.Ctx) error {
-        linesToRead := ctx.Int("lines")
+    Handler: func(r *polaris.ReqCtx) (polaris.Resp, error) {
+        linesToRead := r.Int("lines")
         // Implementation to read log file...
-        ctx.Set(polaris.Resp{
+        return polaris.Resp{
             "log_content": content,
-        })
-        return nil
+        }, nil
     },
 })
 ```
 
-### 3. Client Application (`main.go`)
+### 3. Client Application (`client.go`)
 
 The client application connects to the registry, creates a session with the AI model, and sends a natural language prompt to request log information:
 
@@ -122,7 +121,7 @@ $ go run log-agent.go
 4. In another terminal, run the client:
 
 ```shell
-$ go run main.go
+$ go run client.go
 ```
 
 ## Expected Output
