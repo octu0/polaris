@@ -22,7 +22,7 @@ func (c *Conn) RegisterSSEMCPTools(baseURL string, initReq mcp.InitializeRequest
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	c.logger.Infof("sseMCPClient init=%v", initResp.ServerInfo)
+	c.logger.Debugf("sseMCPClient init=%v", initResp.ServerInfo)
 
 	r, err := mcpClient.ListTools(c.ctx, mcp.ListToolsRequest{})
 	if err != nil {
