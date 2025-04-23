@@ -104,7 +104,7 @@ func (d *defaultRemoteCall) callFunction(name string, args map[string]any) (map[
 		}
 	}
 
-	d.logger.DebugF("callFunction: %s args=%v", name, args)
+	d.logger.Debugf("callFunction: %s args=%v", name, args)
 	resp, err := requestWithData(
 		d.conn,
 		tooltopic(name),

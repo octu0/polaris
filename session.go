@@ -216,7 +216,7 @@ func (s *LiveSession) handleMsg(genContentResp *genai.GenerateContentResponse) i
 			return
 		}
 		for {
-			s.logger.DebugF("finish reasion: %s", resp.Candidates[0].FinishReason)
+			s.logger.Debugf("finish reasion: %s", resp.Candidates[0].FinishReason)
 			if resp.Candidates[0].FinishReason == genai.FinishReasonMalformedFunctionCall {
 				err := errors.Errorf("malformed function call: %s", resp.Candidates[0].FinishMessage)
 				s.logger.Warnf("%+v", err)

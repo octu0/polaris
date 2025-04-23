@@ -6,7 +6,7 @@ import (
 )
 
 type Logger interface {
-	DebugF(string, ...any)
+	Debugf(string, ...any)
 	Infof(string, ...any)
 	Warnf(string, ...any)
 	Errorf(string, ...any)
@@ -22,7 +22,7 @@ type stdLogger struct {
 }
 
 // DebugF implements logger.
-func (s *stdLogger) DebugF(f string, values ...any) {
+func (s *stdLogger) Debugf(f string, values ...any) {
 	if s.debugMode {
 		s.logger.Printf("DEBUG: %s", fmt.Sprintf(f, values...))
 	}
