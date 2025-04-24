@@ -11,27 +11,7 @@
 
 `polaris` is a Go framework for building **distributed AI agents**.
 
-These agents run as lightweight sidecars alongside your applications, securely exposing system capabilities and local resources (like logs or metrics) via **Function Calling**. This enables AI models (such as Google's Vertex AI Gemini) to intelligently interact with your distributed infrastructure through a unified polaris interface, simplifying complex coordination. The framework is designed for **parallel execution** to handle demanding workloads.
-
-## Why `polaris` ?
-
-Building robust server-side Function Calling, especially in distributed systems, presents significant hurdles:
-
-- **Schema Management Complexity:** Keeping function definitions consistent across multiple services is challenging.
-- **Coordination Difficulties:** Orchestrating interactions between services (RPC) often requires complex transport logic and boilerplate code.
-- **Integration Friction:** Adding Function Calling capabilities to existing services can demand substantial code modifications.
-
-`polaris` is a distributed AI agent framework designed to simplify this.
-
-It offers a novel approach focused on ease of use and intelligent coordination:
-
-- **Centralized `registry` Cluster:** Provides a highly available, central point for managing function schemas and discovering services, eliminating synchronization headaches.
-- **Lightweight Sidecar Agents:** `polaris` agents run alongside your applications as sidecars. This minimizes the need for direct code integration into your existing services.
-- **Context-Aware Execution:** The sidecar model allows agents to directly access local context, such as logs or metrics. This enables smarter Function Calling – for example, an agent can analyze local server logs and metrics simultaneously to diagnose an issue.
-- **Efficient Operation:** Currently leverages Gemini for its reasoning, requiring minimal computational resources on the agent side.
-
-**In essence, `polaris` enables "AI-driven RPC"** – using the power of Function Calling to intelligently orchestrate procedure calls across your distributed system, simplifying development and unlocking new possibilities for AI agent collaboration.
-
+These agents run as lightweight sidecars alongside your applications, securely exposing system capabilities and local resources (like logs or metrics) via **Function Calling**. This enables AI models (such as Google's Vertex AI Gemini) to intelligently interact with your distributed infrastructure through a unified polaris interface, simplifying complex coordination. This framework is designed for **parallel execution** to handle demanding workloads.
 
 ## Features
 
