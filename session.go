@@ -52,7 +52,7 @@ func createSession(ctx context.Context, tc toolConn, rc remoteCall, options ...U
 			rt.Parameters.Properties["_error"] = &genai.Schema{
 				Type:        genai.TypeString,
 				Description: "Error details for failed function call",
-				Nullable:    genai.Ptr[bool](true),
+				Nullable:    genai.Ptr(true),
 			}
 		}
 		functionDeclarations[i] = &genai.FunctionDeclaration{
