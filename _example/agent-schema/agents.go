@@ -43,7 +43,7 @@ func registerWeatherAgent(ctx context.Context, conn *polaris.Conn) error {
 			myTool, _ := conn.Tool(toolName)
 			gen, err := polaris.GenerateJSON(
 				ctx,
-				polaris.UseModel("gemini-2.5-pro-exp-03-25"),
+				polaris.UseModel("gemini-2.5-flash-preview-05-20"),
 				polaris.UseSystemInstruction(
 					polaris.AddTextSystemInstruction("Output must be in Japanese."),
 				),
@@ -97,7 +97,7 @@ func registerFortuneAgent(ctx context.Context, conn *polaris.Conn) error {
 			t, _ := conn.Tool(toolName)
 			gen, err := polaris.GenerateJSON(
 				ctx,
-				polaris.UseModel("gemini-2.5-pro-exp-03-25"),
+				polaris.UseModel("gemini-2.5-flash-preview-05-20"),
 				polaris.UseSystemInstruction(
 					polaris.AddTextSystemInstruction("Output must be in Japanese."),
 				),

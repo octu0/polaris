@@ -7,13 +7,12 @@ import (
 	"os"
 	"sync"
 
-	"cloud.google.com/go/vertexai/genai"
 	"github.com/pkg/errors"
+	"google.golang.org/genai"
 )
 
 type Session interface {
 	SendText(...string) (iter.Seq2[string, error], error)
-	Close() error
 	JSONOutput() bool
 }
 
@@ -53,7 +52,7 @@ func createSession(ctx context.Context, tc toolConn, rc remoteCall, options ...U
 			rt.Parameters.Properties["_error"] = &genai.Schema{
 				Type:        genai.TypeString,
 				Description: "Error details for failed function call",
-				Nullable:    true,
+				Nullable:    genai.Ptr[bool](true),
 			}
 		}
 		functionDeclarations[i] = &genai.FunctionDeclaration{
@@ -69,36 +68,49 @@ func createSession(ctx context.Context, tc toolConn, rc remoteCall, options ...U
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	model := client.GenerativeModel(opt.Model)
-	model.Temperature = genai.Ptr(opt.Temperature)
-	model.TopP = genai.Ptr(opt.TopP)
-	model.MaxOutputTokens = genai.Ptr(opt.MaxOutputTokens)
+	config := &genai.GenerateContentConfig{
+		Temperature:     genai.Ptr(opt.Temperature),
+		TopP:            genai.Ptr(opt.TopP),
+		MaxOutputTokens: opt.MaxOutputTokens,
+		ThinkingConfig: &genai.ThinkingConfig{
+			IncludeThoughts: false,
+		},
+	}
 
 	if opt.JSONOutput {
-		model.ResponseMIMEType = "application/json"
+		config.ResponseMIMEType = "application/json"
 		if opt.OutputSchema != nil {
-			model.ResponseSchema = opt.OutputSchema.Schema()
+			config.ResponseSchema = opt.OutputSchema.Schema().ToGenAI()
 		}
 	}
 	if 0 < len(opt.SystemInstructions) {
-		model.SystemInstruction = &genai.Content{
-			Parts: opt.SystemInstructions,
-		}
+		config.SystemInstruction = genai.NewContentFromParts(opt.SystemInstructions, genai.RoleUser)
 	}
+
 	// JSONOutput && Tools = does not support
 	if 0 < len(functionDeclarations) && opt.JSONOutput != true {
-		model.Tools = []*genai.Tool{{
+		config.Tools = []*genai.Tool{{
 			FunctionDeclarations: functionDeclarations,
 		}}
-		model.ToolConfig = &genai.ToolConfig{
+		config.ToolConfig = &genai.ToolConfig{
 			FunctionCallingConfig: &genai.FunctionCallingConfig{
-				Mode: genai.FunctionCallingAuto,
+				Mode: genai.FunctionCallingConfigModeAuto,
 				//AllowedFunctionNames: functionNames,
 			},
 		}
 	}
 
-	return &LiveSession{ctx, opt, logger, rc, client, model.StartChat()}, nil
+	if 0 < opt.ThinkingBudget {
+		config.ThinkingConfig.IncludeThoughts = true
+		config.ThinkingConfig.ThinkingBudget = genai.Ptr(opt.ThinkingBudget)
+	}
+
+	chat, err := client.Chats.Create(ctx, opt.Model, config, nil)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return &LiveSession{ctx, opt, logger, rc, client, chat}, nil
 }
 
 type toolConn interface {
@@ -128,23 +140,19 @@ type LiveSession struct {
 	logger  Logger
 	rc      remoteCall
 	client  *genai.Client
-	session *genai.ChatSession
+	session *genai.Chat
 }
 
 func (s *LiveSession) JSONOutput() bool {
 	return s.opt.JSONOutput
 }
 
-func (s *LiveSession) Close() error {
-	return s.client.Close()
-}
-
 func (s *LiveSession) SendText(values ...string) (iter.Seq2[string, error], error) {
-	texts := make([]genai.Part, len(values))
+	texts := make([]*genai.Part, len(values))
 	for i, v := range values {
-		texts[i] = genai.Text(v)
+		texts[i] = genai.NewPartFromText(v)
 	}
-	resp, err := s.session.SendMessage(s.ctx, texts...)
+	resp, err := s.session.Send(s.ctx, texts...)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -154,54 +162,51 @@ func (s *LiveSession) SendText(values ...string) (iter.Seq2[string, error], erro
 func (s *LiveSession) handleMsg(genContentResp *genai.GenerateContentResponse) iter.Seq2[string, error] {
 	return func(yield func(string, error) bool) {
 		generate := func(resp *genai.GenerateContentResponse) (*genai.GenerateContentResponse, error) {
+			funcalls := resp.FunctionCalls()
 			wg := new(sync.WaitGroup)
-			ret := make(chan funcallCtx, len(resp.Candidates[0].FunctionCalls()))
+			ret := make(chan funcallCtx, len(funcalls))
 
-			i := 0
-			for _, p := range resp.Candidates[0].Content.Parts {
-				switch v := p.(type) {
-				case genai.Text:
-					if yield(string(v), nil) != true {
-						return endContent(), nil
+			for i, fc := range funcalls {
+				wg.Add(1)
+				go func(i int, funcall *genai.FunctionCall) {
+					defer wg.Done()
+
+					r, err := s.rc.callFunction(funcall.Name, funcall.Args)
+					if err != nil {
+						err = errors.Wrapf(err, "name=%s, args=%v", funcall.Name, funcall.Args)
 					}
-				case genai.FunctionCall:
-					wg.Add(1)
-					go func(i int, funcall genai.FunctionCall) {
-						defer wg.Done()
-
-						r, err := s.rc.callFunction(funcall.Name, funcall.Args)
-						if err != nil {
-							err = errors.Wrapf(err, "name=%s, args=%v", funcall.Name, funcall.Args)
-						}
-						ret <- funcallCtx{
-							i,
-							funcall.Name,
-							r,
-							err,
-						}
-					}(i, v)
-					i += 1
-				}
+					ret <- funcallCtx{
+						i,
+						funcall.Name,
+						r,
+						err,
+					}
+				}(i, fc)
 			}
 			wg.Wait()
 			close(ret)
 
-			funcResults := make([]genai.Part, i)
+			for _, p := range resp.Candidates[0].Content.Parts {
+				if p.Text != "" {
+					if yield(p.Text, nil) != true {
+						return endContent(), nil
+					}
+				}
+			}
+
+			funcResults := make([]*genai.Part, len(funcalls))
 			for r := range ret {
 				if r.err != nil {
 					yield("", errors.WithStack(r.err))
 					return nil, errors.WithStack(r.err)
 				}
-				funcResults[r.index] = &genai.FunctionResponse{
-					Name:     r.name,
-					Response: r.resp,
-				}
+				funcResults[r.index] = genai.NewPartFromFunctionResponse(r.name, r.resp)
 			}
 			if len(funcResults) < 1 {
 				return endContent(), nil
 			}
 
-			resp2, err := s.session.SendMessage(s.ctx, funcResults...)
+			resp2, err := s.session.Send(s.ctx, funcResults...)
 			if err != nil {
 				err = errors.WithStack(err)
 				yield("", err)

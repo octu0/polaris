@@ -1,7 +1,7 @@
 package polaris
 
 import (
-	"cloud.google.com/go/vertexai/genai"
+	"google.golang.org/genai"
 )
 
 type jsonMap map[string]any
@@ -222,7 +222,7 @@ func (c *ReqCtx) IntArray(key string) []int {
 		return c.req.IntArray(key, []int{})
 	}
 	if arr, ok := t.(Array); ok {
-		if arr.Items.Schema().Type == genai.TypeInteger {
+		if arr.Items.Schema().Type == string(genai.TypeInteger) {
 			return c.req.IntArray(key, []int{})
 		}
 	}
@@ -235,7 +235,7 @@ func (c *ReqCtx) FloatArray(key string) []float64 {
 		return c.req.Float64Array(key, []float64{})
 	}
 	if arr, ok := t.(Array); ok {
-		if arr.Items.Schema().Type == genai.TypeNumber {
+		if arr.Items.Schema().Type == string(genai.TypeNumber) {
 			return c.req.Float64Array(key, []float64{})
 		}
 	}
@@ -248,7 +248,7 @@ func (c *ReqCtx) StringArray(key string) []string {
 		return c.req.StringArray(key, []string{})
 	}
 	if arr, ok := t.(Array); ok {
-		if arr.Items.Schema().Type == genai.TypeString {
+		if arr.Items.Schema().Type == string(genai.TypeString) {
 			return c.req.StringArray(key, []string{})
 		}
 	}

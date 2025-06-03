@@ -22,7 +22,7 @@ func main() {
 	ctx := context.TODO()
 	session, err := conn.Use(
 		ctx,
-		polaris.UseModel("gemini-2.5-pro-exp-03-25"),
+		polaris.UseModel("gemini-2.5-pro-preview-05-06"),
 		polaris.UseSystemInstruction(
 			polaris.AddTextSystemInstruction("Output must be in Japanese."),
 		),
@@ -31,7 +31,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer session.Close()
 
 	prompt := `
 		tell me today condition.

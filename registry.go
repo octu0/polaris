@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"cloud.google.com/go/vertexai/genai"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/pkg/errors"
 )
@@ -20,7 +19,7 @@ const (
 )
 
 type toolDeclareWithDeadline struct {
-	Declare  genai.FunctionDeclaration
+	Declare  WrapFunctionDeclaration
 	Deadline time.Time
 }
 
@@ -60,8 +59,8 @@ func (r *Registry) subscribeTool() error {
 	if err := subscribeReqResp(
 		r.conn,
 		TopicRegisterTool,
-		GobEncoder[genai.FunctionDeclaration](),
-		GobEncoder[RespError](),
+		JSONEncoder[WrapFunctionDeclaration](),
+		JSONEncoder[RespError](),
 		r.handleRegisterTool,
 	); err != nil {
 		return errors.WithStack(err)
@@ -70,8 +69,8 @@ func (r *Registry) subscribeTool() error {
 	if err := subscribeReqResp(
 		r.conn,
 		TopicUnregisterTool,
-		GobEncoder[genai.FunctionDeclaration](),
-		GobEncoder[RespError](),
+		JSONEncoder[WrapFunctionDeclaration](),
+		JSONEncoder[RespError](),
 		r.handleUnregisterTool,
 	); err != nil {
 		return errors.WithStack(err)
@@ -80,7 +79,7 @@ func (r *Registry) subscribeTool() error {
 	if err := subscribeResp(
 		r.conn,
 		TopicListTool,
-		GobEncoder[[]genai.FunctionDeclaration](),
+		JSONEncoder[[]WrapFunctionDeclaration](),
 		r.handleListTool,
 	); err != nil {
 		return errors.WithStack(err)
@@ -89,8 +88,8 @@ func (r *Registry) subscribeTool() error {
 	if err := subscribeReqResp(
 		r.conn,
 		TopicToolKeepalive,
-		GobEncoder[[]genai.FunctionDeclaration](),
-		GobEncoder[RespError](),
+		JSONEncoder[[]WrapFunctionDeclaration](),
+		JSONEncoder[RespError](),
 		r.handleToolKeepAlive,
 	); err != nil {
 		return errors.WithStack(err)
@@ -132,7 +131,7 @@ func (r *Registry) toolGCLoop() {
 	}
 }
 
-func (r *Registry) handleRegisterTool(declare genai.FunctionDeclaration) RespError {
+func (r *Registry) handleRegisterTool(declare WrapFunctionDeclaration) RespError {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
@@ -147,7 +146,7 @@ func (r *Registry) handleRegisterTool(declare genai.FunctionDeclaration) RespErr
 	return RespError{true, "OK"}
 }
 
-func (r *Registry) handleUnregisterTool(declare genai.FunctionDeclaration) RespError {
+func (r *Registry) handleUnregisterTool(declare WrapFunctionDeclaration) RespError {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
@@ -159,18 +158,18 @@ func (r *Registry) handleUnregisterTool(declare genai.FunctionDeclaration) RespE
 	return RespError{true, "OK"}
 }
 
-func (r *Registry) handleListTool() []genai.FunctionDeclaration {
+func (r *Registry) handleListTool() []WrapFunctionDeclaration {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
-	list := make([]genai.FunctionDeclaration, 0, len(r.tools))
+	list := make([]WrapFunctionDeclaration, 0, len(r.tools))
 	for _, t := range r.tools {
 		list = append(list, t.Declare)
 	}
 	return list
 }
 
-func (r *Registry) handleToolKeepAlive(list []genai.FunctionDeclaration) RespError {
+func (r *Registry) handleToolKeepAlive(list []WrapFunctionDeclaration) RespError {
 	for _, d := range list {
 		r.mutex.Lock()
 		if v, ok := r.tools[d.Name]; ok {
