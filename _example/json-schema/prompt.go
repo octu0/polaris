@@ -12,7 +12,7 @@ func main() {
 
 	session, err := polaris.Generate(
 		ctx,
-		polaris.UseModel("gemini-2.5-pro-exp-03-25"),
+		polaris.UseModel("gemini-2.5-pro-preview-05-06"),
 		polaris.UseTemperature(0.2),
 		polaris.UseJSONOutput(polaris.Object{
 			Description: "result of each",
@@ -31,7 +31,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer session.Close()
 
 	prompt := `
 		execute this task:

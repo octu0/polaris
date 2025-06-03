@@ -1,6 +1,5 @@
 package polaris
 
-/*
 import (
 	"reflect"
 	"slices"
@@ -87,8 +86,8 @@ func TestTool(t *testing.T) {
 		want := genai.FunctionDeclaration{
 			Name:        "test_tool",
 			Description: "A test tool",
-			Parameters:  params.Schema(),
-			Response:    response.Schema(),
+			Parameters:  params.Schema().ToGenAI(),
+			Response:    response.Schema().ToGenAI(),
 		}
 
 		got := tool.FunctionDeclaration()
@@ -99,14 +98,14 @@ func TestTool(t *testing.T) {
 			tt.Errorf("Tool.FunctionDeclaration().Description = %v, want %v", got.Description, want.Description)
 		}
 
-		if got.Parameters.Type != want.Parameters.Type {
+		if ToGenAIType(got.Parameters.Type) != want.Parameters.Type {
 			tt.Errorf("Tool.FunctionDeclaration().Parameters.Type = %v, want %v", got.Parameters.Type, want.Parameters.Type)
 		}
 		if got.Parameters.Description != want.Parameters.Description {
 			tt.Errorf("Tool.FunctionDeclaration().Parameters.Description = %v, want %v", got.Parameters.Description, want.Parameters.Description)
 		}
 
-		if got.Response.Type != want.Response.Type {
+		if ToGenAIType(got.Response.Type) != want.Response.Type {
 			tt.Errorf("Tool.FunctionDeclaration().Response.Type = %v, want %v", got.Response.Type, want.Response.Type)
 		}
 		if got.Response.Description != want.Response.Description {
@@ -197,7 +196,7 @@ func TestArray(t *testing.T) {
 		}
 
 		schema := array.Schema()
-		if schema.Type != genai.TypeArray {
+		if ToGenAIType(schema.Type) != genai.TypeArray {
 			tt.Errorf("Array.Schema().Type = %v, want %v", schema.Type, genai.TypeArray)
 		}
 		if schema.Description != "Test array" {
@@ -206,7 +205,7 @@ func TestArray(t *testing.T) {
 		if *schema.Nullable != false {
 			tt.Errorf("Array.Schema().Nullable = %v, want %v", schema.Nullable, false)
 		}
-		if schema.Items.Type != genai.TypeString {
+		if ToGenAIType(schema.Items.Type) != genai.TypeString {
 			tt.Errorf("Array.Schema().Items.Type = %v, want %v", schema.Items.Type, genai.TypeString)
 		}
 		if schema.Items.Description != "A string item" {
@@ -225,7 +224,7 @@ func TestIntArray(t *testing.T) {
 		}
 
 		schema := array.Schema()
-		if schema.Type != genai.TypeArray {
+		if ToGenAIType(schema.Type) != genai.TypeArray {
 			tt.Errorf("IntArray.Schema().Type = %v, want %v", schema.Type, genai.TypeArray)
 		}
 		if schema.Description != "Test int array" {
@@ -234,7 +233,7 @@ func TestIntArray(t *testing.T) {
 		if *schema.Nullable != false {
 			tt.Errorf("IntArray.Schema().Nullable = %v, want %v", schema.Nullable, false)
 		}
-		if schema.Items.Type != genai.TypeInteger {
+		if ToGenAIType(schema.Items.Type) != genai.TypeInteger {
 			tt.Errorf("IntArray.Schema().Items.Type = %v, want %v", schema.Items.Type, genai.TypeInteger)
 		}
 		if schema.Items.Description != "An integer item" {
@@ -253,7 +252,7 @@ func TestFloatArray(t *testing.T) {
 		}
 
 		schema := array.Schema()
-		if schema.Type != genai.TypeArray {
+		if ToGenAIType(schema.Type) != genai.TypeArray {
 			tt.Errorf("FloatArray.Schema().Type = %v, want %v", schema.Type, genai.TypeArray)
 		}
 		if schema.Description != "Test float array" {
@@ -262,7 +261,7 @@ func TestFloatArray(t *testing.T) {
 		if *schema.Nullable != false {
 			tt.Errorf("FloatArray.Schema().Nullable = %v, want %v", schema.Nullable, false)
 		}
-		if schema.Items.Type != genai.TypeNumber {
+		if ToGenAIType(schema.Items.Type) != genai.TypeNumber {
 			tt.Errorf("FloatArray.Schema().Items.Type = %v, want %v", schema.Items.Type, genai.TypeNumber)
 		}
 		if schema.Items.Description != "A float item" {
@@ -281,7 +280,7 @@ func TestStringArray(t *testing.T) {
 		}
 
 		schema := array.Schema()
-		if schema.Type != genai.TypeArray {
+		if ToGenAIType(schema.Type) != genai.TypeArray {
 			tt.Errorf("StringArray.Schema().Type = %v, want %v", schema.Type, genai.TypeArray)
 		}
 		if schema.Description != "Test string array" {
@@ -290,7 +289,7 @@ func TestStringArray(t *testing.T) {
 		if *schema.Nullable != false {
 			tt.Errorf("StringArray.Schema().Nullable = %v, want %v", schema.Nullable, false)
 		}
-		if schema.Items.Type != genai.TypeString {
+		if ToGenAIType(schema.Items.Type) != genai.TypeString {
 			tt.Errorf("StringArray.Schema().Items.Type = %v, want %v", schema.Items.Type, genai.TypeString)
 		}
 		if schema.Items.Description != "A string item" {
@@ -309,7 +308,7 @@ func TestBoolArray(t *testing.T) {
 		}
 
 		schema := array.Schema()
-		if schema.Type != genai.TypeArray {
+		if ToGenAIType(schema.Type) != genai.TypeArray {
 			tt.Errorf("BoolArray.Schema().Type = %v, want %v", schema.Type, genai.TypeArray)
 		}
 		if schema.Description != "Test bool array" {
@@ -318,7 +317,7 @@ func TestBoolArray(t *testing.T) {
 		if *schema.Nullable != false {
 			tt.Errorf("BoolArray.Schema().Nullable = %v, want %v", schema.Nullable, false)
 		}
-		if schema.Items.Type != genai.TypeBoolean {
+		if ToGenAIType(schema.Items.Type) != genai.TypeBoolean {
 			tt.Errorf("BoolArray.Schema().Items.Type = %v, want %v", schema.Items.Type, genai.TypeBoolean)
 		}
 		if schema.Items.Description != "A boolean item" {
@@ -347,7 +346,7 @@ func TestObjectArray(t *testing.T) {
 		}
 
 		schema := array.Schema()
-		if schema.Type != genai.TypeArray {
+		if ToGenAIType(schema.Type) != genai.TypeArray {
 			tt.Errorf("ObjectArray.Schema().Type = %v, want %v", schema.Type, genai.TypeArray)
 		}
 		if schema.Description != "Test object array" {
@@ -356,7 +355,7 @@ func TestObjectArray(t *testing.T) {
 		if *schema.Nullable != false {
 			tt.Errorf("ObjectArray.Schema().Nullable = %v, want %v", schema.Nullable, false)
 		}
-		if schema.Items.Type != genai.TypeObject {
+		if ToGenAIType(schema.Items.Type) != genai.TypeObject {
 			tt.Errorf("ObjectArray.Schema().Items.Type = %v, want %v", schema.Items.Type, genai.TypeObject)
 		}
 		if schema.Items.Description != "An object item" {
@@ -395,7 +394,7 @@ func TestIntEnum(t *testing.T) {
 		}
 
 		schema := enum.Schema()
-		if schema.Type != genai.TypeInteger {
+		if ToGenAIType(schema.Type) != genai.TypeInteger {
 			tt.Errorf("IntEnum.Schema().Type = %v, want %v", schema.Type, genai.TypeInteger)
 		}
 		if schema.Description != "Test int enum" {
@@ -425,7 +424,7 @@ func TestStringEnum(t *testing.T) {
 		}
 
 		schema := enum.Schema()
-		if schema.Type != genai.TypeString {
+		if ToGenAIType(schema.Type) != genai.TypeString {
 			tt.Errorf("StringEnum.Schema().Type = %v, want %v", schema.Type, genai.TypeString)
 		}
 		if schema.Description != "Test string enum" {
@@ -455,7 +454,7 @@ func TestInt(t *testing.T) {
 		}
 
 		schema := intType.Schema()
-		if schema.Type != genai.TypeInteger {
+		if ToGenAIType(schema.Type) != genai.TypeInteger {
 			tt.Errorf("Int.Schema().Type = %v, want %v", schema.Type, genai.TypeInteger)
 		}
 		if schema.Description != "Test int" {
@@ -477,7 +476,7 @@ func TestFloat(t *testing.T) {
 		}
 
 		schema := floatType.Schema()
-		if schema.Type != genai.TypeNumber {
+		if ToGenAIType(schema.Type) != genai.TypeNumber {
 			tt.Errorf("Float.Schema().Type = %v, want %v", schema.Type, genai.TypeNumber)
 		}
 		if schema.Description != "Test float" {
@@ -499,7 +498,7 @@ func TestString(t *testing.T) {
 		}
 
 		schema := stringType.Schema()
-		if schema.Type != genai.TypeString {
+		if ToGenAIType(schema.Type) != genai.TypeString {
 			tt.Errorf("String.Schema().Type = %v, want %v", schema.Type, genai.TypeString)
 		}
 		if schema.Description != "Test string" {
@@ -521,7 +520,7 @@ func TestBool(t *testing.T) {
 		}
 
 		schema := boolType.Schema()
-		if schema.Type != genai.TypeBoolean {
+		if ToGenAIType(schema.Type) != genai.TypeBoolean {
 			tt.Errorf("Bool.Schema().Type = %v, want %v", schema.Type, genai.TypeBoolean)
 		}
 		if schema.Description != "Test bool" {
@@ -661,4 +660,3 @@ func TestIsRequired(t *testing.T) {
 		})
 	}
 }
-*/

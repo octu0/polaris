@@ -246,7 +246,7 @@ func main() {
     // Ensure your environment is configured for Vertex AI authentication
     session, err := conn.Use(
         ctx,
-        polaris.UseModel("gemini-2.5-pro-exp-03-25"),
+        polaris.UseModel("gemini-2.5-pro-preview-05-06"),
         polaris.UseSystemInstruction(
             polaris.AddTextSystemInstruction("You can interact with server logs using available tools."),
         ),
@@ -304,7 +304,7 @@ func main() {
 
     gen, err := polaris.GenerateJSON(
         ctx,
-        polaris.UseModel("gemini-2.5-pro-exp-03-25"),
+        polaris.UseModel("gemini-2.5-pro-preview-05-06"),
         polaris.UseTemperature(0.2),
         polaris.UseJSONOutput(polaris.Object{
             Description: "result of each",
