@@ -17,7 +17,6 @@ func Example_jsonOutput_promptInstruction() {
 	if err != nil {
 		panic(err)
 	}
-	defer session.Close()
 
 	prompt := `
 		execute this task:

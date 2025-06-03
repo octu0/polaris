@@ -22,7 +22,7 @@ func main() {
 	// Ensure your environment is configured for Vertex AI authentication
 	session, err := conn.Use(
 		ctx,
-		polaris.UseModel("gemini-2.5-pro-exp-03-25"),
+		polaris.UseModel("gemini-2.5-pro-preview-05-06"),
 		polaris.UseSystemInstruction(
 			polaris.AddTextSystemInstruction("You can interact with server logs using available tools."),
 		),
@@ -31,7 +31,6 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create AI session: %v", err))
 	}
-	defer session.Close()
 	fmt.Println("AI session created.")
 
 	// Define the prompt for the AI, asking it to use a tool potentially hosted on a remote agent

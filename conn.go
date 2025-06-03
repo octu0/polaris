@@ -8,11 +8,10 @@ import (
 	"os"
 	"time"
 
-	"cloud.google.com/go/vertexai/genai"
 	"github.com/mark3labs/mcp-go/client"
 	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
-	"google.golang.org/api/option"
+	"google.golang.org/genai"
 )
 
 type ConnectOptionFunc func(*ConnectOption)
@@ -113,12 +112,13 @@ type UseOptionFunc func(*UseOption)
 type UseOption struct {
 	Model              string
 	UseLocalTool       bool
-	SystemInstructions []genai.Part
+	SystemInstructions []*genai.Part
 	Temperature        float32
 	TopP               float32
 	MaxOutputTokens    int32
 	JSONOutput         bool
 	OutputSchema       TypeDef
+	ThinkingBudget     int32
 	Logger             Logger
 	DebugMode          bool
 	DefaultArgsFunc    func() map[string]any
@@ -136,29 +136,29 @@ func UseLocalTool(enable bool) UseOptionFunc {
 	}
 }
 
-type SystemInstructionOptfion func() []genai.Part
+type SystemInstructionOptfion func() []*genai.Part
 
-func AddTextSystemInstruction(values ...string) func() []genai.Part {
-	return func() []genai.Part {
-		parts := make([]genai.Part, len(values))
+func AddTextSystemInstruction(values ...string) SystemInstructionOptfion {
+	return func() []*genai.Part {
+		parts := make([]*genai.Part, len(values))
 		for i, v := range values {
-			parts[i] = genai.Text(v)
+			parts[i] = genai.NewPartFromText(v)
 		}
 		return parts
 	}
 }
 
-func AddBinarySystemInstruction(data []byte, mimeType string) func() []genai.Part {
-	return func() []genai.Part {
-		return []genai.Part{
-			&genai.Blob{MIMEType: mimeType, Data: data},
+func AddBinarySystemInstruction(data []byte, mimeType string) SystemInstructionOptfion {
+	return func() []*genai.Part {
+		return []*genai.Part{
+			genai.NewPartFromBytes(data, mimeType),
 		}
 	}
 }
 
 func UseSystemInstruction(sysInstructionOptions ...SystemInstructionOptfion) UseOptionFunc {
 	return func(o *UseOption) {
-		parts := make([]genai.Part, 0, len(sysInstructionOptions))
+		parts := make([]*genai.Part, 0, len(sysInstructionOptions))
 		for _, f := range sysInstructionOptions {
 			parts = append(parts, f()...)
 		}
@@ -218,6 +218,12 @@ func UseDebugMode(enable bool) UseOptionFunc {
 func UseDefaultArgs(fn func() map[string]any) UseOptionFunc {
 	return func(o *UseOption) {
 		o.DefaultArgsFunc = fn
+	}
+}
+
+func UseThinking(budget int32) UseOptionFunc {
+	return func(o *UseOption) {
+		o.ThinkingBudget = budget
 	}
 }
 
@@ -282,11 +288,9 @@ func GenerateJSON(ctx context.Context, options ...UseOptionFunc) (GenerateJSONFu
 		return nil, errors.WithStack(err)
 	}
 	if s.JSONOutput() != true {
-		s.Close()
 		return nil, errors.Errorf("require JSONOutput=true")
 	}
 	return func(text ...string) (Resp, error) {
-		defer s.Close()
 		it, err := s.SendText(text...)
 		if err != nil {
 			return nil, errors.WithStack(err)
@@ -336,7 +340,7 @@ func (c *Conn) UnregisterTools() error {
 	if len(c.tools) < 1 {
 		return nil
 	}
-	list := make([]genai.FunctionDeclaration, len(c.tools))
+	list := make([]WrapFunctionDeclaration, len(c.tools))
 	for i, t := range c.tools {
 		list[i] = t.FunctionDeclaration()
 	}
@@ -344,8 +348,8 @@ func (c *Conn) UnregisterTools() error {
 		resp, err := requestWithData(
 			c,
 			TopicUnregisterTool,
-			GobEncoder[genai.FunctionDeclaration](),
-			GobEncoder[RespError](),
+			JSONEncoder[WrapFunctionDeclaration](),
+			JSONEncoder[RespError](),
 			dec,
 		)
 		if err != nil {
@@ -372,8 +376,8 @@ func (c *Conn) RegisterTool(t Tool) error {
 	resp, err := requestWithData(
 		c,
 		TopicRegisterTool,
-		GobEncoder[genai.FunctionDeclaration](),
-		GobEncoder[RespError](),
+		JSONEncoder[WrapFunctionDeclaration](),
+		JSONEncoder[RespError](),
 		t.FunctionDeclaration(),
 	)
 	if err != nil {
@@ -399,7 +403,7 @@ func (c *Conn) listTools(useLocalTool bool) ([]genai.FunctionDeclaration, error)
 	remoteList, err := request(
 		c,
 		TopicListTool,
-		GobEncoder[[]genai.FunctionDeclaration](),
+		JSONEncoder[[]WrapFunctionDeclaration](),
 	)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -412,7 +416,7 @@ func (c *Conn) listTools(useLocalTool bool) ([]genai.FunctionDeclaration, error)
 				continue
 			}
 		}
-		declares = append(declares, d)
+		declares = append(declares, d.ToGenAI())
 	}
 	return declares, nil
 }
@@ -441,15 +445,15 @@ func (c *Conn) toolKeepAlive() {
 		return
 	}
 
-	list := make([]genai.FunctionDeclaration, len(c.tools))
+	list := make([]WrapFunctionDeclaration, len(c.tools))
 	for i, t := range c.tools {
 		list[i] = t.FunctionDeclaration()
 	}
 	resp, err := requestWithData(
 		c,
 		TopicToolKeepalive,
-		GobEncoder[[]genai.FunctionDeclaration](),
-		GobEncoder[RespError](),
+		JSONEncoder[[]WrapFunctionDeclaration](),
+		JSONEncoder[RespError](),
 		list,
 	)
 	if err != nil {
@@ -580,35 +584,16 @@ func subscribeReqResp[Req any, Resp any](c *Conn, topic string, encReq Encoder[R
 
 func geminiClient(ctx context.Context) (*genai.Client, error) {
 	// require ENV for
+	//  VertexAI mode::
+	//   GOOGLE_GENAI_USE_VERTEXAI=1 or GOOGLE_GENAI_USE_VERTEXAI=yes
 	//   GOOGLE_CLOUD_PROJECT
 	//   GOOGLE_CLOUD_LOCATION
-	//   GOOGLE_APPLICATION_CREDENTIALS or GOOGLE_API_KEY
+	//   GOOGLE_APPLICATION_CREDENTIALS
+	//  GeminiAPI mode::
+	//   GOOGLE_API_KEY
 	//
 
-	project, ok := os.LookupEnv("GOOGLE_CLOUD_PROJECT")
-	if ok != true {
-		return nil, errors.Errorf("require ENV{GOOGLE_CLOUD_PROJECT}")
-	}
-
-	loc, ok := os.LookupEnv("GOOGLE_CLOUD_LOCATION")
-	if ok != true {
-		if region, ok := os.LookupEnv("GOOGLE_CLOUD_REGION"); ok {
-			loc = region
-		} else {
-			loc = "us-central1"
-		}
-	}
-
-	credentials, hasCredential := os.LookupEnv("GOOGLE_APPLICATION_CREDENTIALS")
-	apiKey, hasAPIKey := os.LookupEnv("GOOGLE_API_KEY")
-	clientOption := []option.ClientOption{}
-	if hasCredential {
-		clientOption = append(clientOption, option.WithCredentialsFile(credentials))
-	}
-	if hasAPIKey {
-		clientOption = append(clientOption, option.WithAPIKey(apiKey))
-	}
-	client, err := genai.NewClient(ctx, project, loc, clientOption...)
+	client, err := genai.NewClient(ctx, nil)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

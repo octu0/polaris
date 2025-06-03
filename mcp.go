@@ -1,7 +1,6 @@
 package polaris
 
 import (
-	"cloud.google.com/go/vertexai/genai"
 	"github.com/mark3labs/mcp-go/client"
 	"github.com/mark3labs/mcp-go/client/transport"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -55,8 +54,8 @@ func (c *Conn) RegisterSSEMCPTools(baseURL string, initReq mcp.InitializeRequest
 		resp, err := requestWithData(
 			c,
 			TopicRegisterTool,
-			GobEncoder[genai.FunctionDeclaration](),
-			GobEncoder[RespError](),
+			JSONEncoder[WrapFunctionDeclaration](),
+			JSONEncoder[RespError](),
 			t.FunctionDeclaration(),
 		)
 		if err != nil {

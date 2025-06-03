@@ -246,7 +246,7 @@ func main() {
     // Ensure your environment is configured for Vertex AI authentication
     session, err := conn.Use(
         ctx,
-        polaris.UseModel("gemini-2.5-pro-exp-03-25"),
+        polaris.UseModel("gemini-2.5-pro-preview-05-06"),
         polaris.UseSystemInstruction(
             polaris.AddTextSystemInstruction("You can interact with server logs using available tools."),
         ),
@@ -255,7 +255,6 @@ func main() {
     if err != nil {
         panic(fmt.Sprintf("Failed to create AI session: %v", err))
     }
-    defer session.Close()
     fmt.Println("AI session created.")
 
     // Define the prompt for the AI, asking it to use a tool potentially hosted on a remote agent
@@ -305,7 +304,7 @@ func main() {
 
     gen, err := polaris.GenerateJSON(
         ctx,
-        polaris.UseModel("gemini-2.5-pro-exp-03-25"),
+        polaris.UseModel("gemini-2.5-pro-preview-05-06"),
         polaris.UseTemperature(0.2),
         polaris.UseJSONOutput(polaris.Object{
             Description: "result of each",
@@ -346,14 +345,23 @@ See [_example](https://github.com/octu0/polaris/tree/master/_example) for exampl
 
 Using `polaris`, AI orchestration capabilities, requires bellow:
 
-1.  **Google Cloud Project:**
+- If using **VertexAI Gemini**:
+  - **Google Cloud Project:**
     * Access to a Google Cloud project where you can enable APIs and manage resources.
-2.  **Vertex AI API Enabled:**
+  - **Vertex AI API Enabled:**
     * The **Vertex AI API** must be enabled within your Google Cloud project.
-3.  **Authentication:**
-    * **Environment Variables:**
-        * `GOOGLE_APPLICATION_CREDENTIALS`: Set this to the path of your service account key JSON file.
-        * `GOOGLE_CLOUD_PROJECT`: Set this to your Google Cloud Project ID. 
+  - **Environment Variables:**
+    * `GOOGLE_GENAI_USE_VERTEXAI=1`: Set VertexAI mode
+    * `GOOGLE_APPLICATION_CREDENTIALS`: Set this to the path of your service account key JSON file.
+    * `GOOGLE_CLOUD_PROJECT`: Set this to your Google Cloud Project ID. 
+    * `GOOGLE_CLOUD_LOCATION`: Set this to your Google Cloud Project location/region
+- If using **Gemini API**:
+  - **AI Studio:**
+    * Access to a Google AI Studio
+  - **Get API Key:**
+    * Generate and save an API key
+  - **Environment Variables:**
+    * `GOOGLE_API_KEY`: Set this to your Gemini API Key
 
 # License
 

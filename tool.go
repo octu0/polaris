@@ -1,6 +1,6 @@
 package polaris
 
-import "cloud.google.com/go/vertexai/genai"
+import "google.golang.org/genai"
 
 type NullableType string
 
@@ -9,14 +9,14 @@ const (
 	NullableNo  NullableType = "no"
 )
 
-func (n NullableType) Nullable() bool {
+func (n NullableType) Nullable() *bool {
 	switch n {
 	case NullableYes:
-		return true
+		return genai.Ptr(true)
 	case NullableNo:
-		return false
+		return genai.Ptr(false)
 	default:
-		return true
+		return genai.Ptr(true)
 	}
 }
 
@@ -34,8 +34,8 @@ type Tool struct {
 	ErrorHandler ErrorHandler
 }
 
-func (t Tool) FunctionDeclaration() genai.FunctionDeclaration {
-	return genai.FunctionDeclaration{
+func (t Tool) FunctionDeclaration() WrapFunctionDeclaration {
+	return WrapFunctionDeclaration{
 		Name:        t.Name,
 		Description: t.Description,
 		Parameters:  t.Parameters.Schema(),
@@ -44,7 +44,7 @@ func (t Tool) FunctionDeclaration() genai.FunctionDeclaration {
 }
 
 type TypeDef interface {
-	Schema() *genai.Schema
+	Schema() *WrapSchema
 	IsRequired() bool
 }
 
@@ -78,8 +78,8 @@ type Object struct {
 	Nullable    NullableType
 }
 
-func (o Object) Schema() *genai.Schema {
-	properties := make(map[string]*genai.Schema, len(o.Properties))
+func (o Object) Schema() *WrapSchema {
+	properties := make(map[string]*WrapSchema, len(o.Properties))
 	requiredKeys := make([]string, 0, len(o.Properties))
 	for k, v := range o.Properties {
 		properties[k] = v.Schema()
@@ -87,8 +87,8 @@ func (o Object) Schema() *genai.Schema {
 			requiredKeys = append(requiredKeys, k)
 		}
 	}
-	return &genai.Schema{
-		Type:        genai.TypeObject,
+	return &WrapSchema{
+		Type:        string(genai.TypeObject),
 		Description: o.Description,
 		Properties:  properties,
 		Required:    requiredKeys,
@@ -192,9 +192,9 @@ type (
 	}
 )
 
-func (a Array) Schema() *genai.Schema {
-	return &genai.Schema{
-		Type:        genai.TypeArray,
+func (a Array) Schema() *WrapSchema {
+	return &WrapSchema{
+		Type:        string(genai.TypeArray),
 		Description: a.Description,
 		Items:       a.Items.Schema(),
 		Nullable:    a.Nullable.Nullable(),
@@ -205,12 +205,12 @@ func (a Array) IsRequired() bool {
 	return a.Required
 }
 
-func (ia IntArray) Schema() *genai.Schema {
-	return &genai.Schema{
-		Type:        genai.TypeArray,
+func (ia IntArray) Schema() *WrapSchema {
+	return &WrapSchema{
+		Type:        string(genai.TypeArray),
 		Description: ia.Description,
-		Items: &genai.Schema{
-			Type:        genai.TypeInteger,
+		Items: &WrapSchema{
+			Type:        string(genai.TypeInteger),
 			Description: ia.ItemDescription,
 		},
 		Nullable: ia.Nullable.Nullable(),
@@ -221,12 +221,12 @@ func (ia IntArray) IsRequired() bool {
 	return ia.Required
 }
 
-func (fa FloatArray) Schema() *genai.Schema {
-	return &genai.Schema{
-		Type:        genai.TypeArray,
+func (fa FloatArray) Schema() *WrapSchema {
+	return &WrapSchema{
+		Type:        string(genai.TypeArray),
 		Description: fa.Description,
-		Items: &genai.Schema{
-			Type:        genai.TypeNumber,
+		Items: &WrapSchema{
+			Type:        string(genai.TypeNumber),
 			Description: fa.ItemDescription,
 		},
 		Nullable: fa.Nullable.Nullable(),
@@ -237,12 +237,12 @@ func (fa FloatArray) IsRequired() bool {
 	return fa.Required
 }
 
-func (sa StringArray) Schema() *genai.Schema {
-	return &genai.Schema{
-		Type:        genai.TypeArray,
+func (sa StringArray) Schema() *WrapSchema {
+	return &WrapSchema{
+		Type:        string(genai.TypeArray),
 		Description: sa.Description,
-		Items: &genai.Schema{
-			Type:        genai.TypeString,
+		Items: &WrapSchema{
+			Type:        string(genai.TypeString),
 			Description: sa.ItemDescription,
 		},
 		Nullable: sa.Nullable.Nullable(),
@@ -253,12 +253,12 @@ func (sa StringArray) IsRequired() bool {
 	return sa.Required
 }
 
-func (ba BoolArray) Schema() *genai.Schema {
-	return &genai.Schema{
-		Type:        genai.TypeArray,
+func (ba BoolArray) Schema() *WrapSchema {
+	return &WrapSchema{
+		Type:        string(genai.TypeArray),
 		Description: ba.Description,
-		Items: &genai.Schema{
-			Type:        genai.TypeBoolean,
+		Items: &WrapSchema{
+			Type:        string(genai.TypeBoolean),
 			Description: ba.ItemDescription,
 		},
 		Nullable: ba.Nullable.Nullable(),
@@ -269,8 +269,8 @@ func (ba BoolArray) IsRequired() bool {
 	return ba.Required
 }
 
-func (oa ObjectArray) Schema() *genai.Schema {
-	properties := make(map[string]*genai.Schema, len(oa.Items))
+func (oa ObjectArray) Schema() *WrapSchema {
+	properties := make(map[string]*WrapSchema, len(oa.Items))
 	requiredKeys := make([]string, 0, len(oa.Items))
 	for k, v := range oa.Items {
 		properties[k] = v.Schema()
@@ -278,11 +278,11 @@ func (oa ObjectArray) Schema() *genai.Schema {
 			requiredKeys = append(requiredKeys, k)
 		}
 	}
-	return &genai.Schema{
-		Type:        genai.TypeArray,
+	return &WrapSchema{
+		Type:        string(genai.TypeArray),
 		Description: oa.Description,
-		Items: &genai.Schema{
-			Type:        genai.TypeObject,
+		Items: &WrapSchema{
+			Type:        string(genai.TypeObject),
 			Description: oa.ItemDescription,
 			Properties:  properties,
 			Required:    requiredKeys,
@@ -323,9 +323,9 @@ type (
 	}
 )
 
-func (ie IntEnum) Schema() *genai.Schema {
-	return &genai.Schema{
-		Type:        genai.TypeInteger,
+func (ie IntEnum) Schema() *WrapSchema {
+	return &WrapSchema{
+		Type:        string(genai.TypeInteger),
 		Description: ie.Description,
 		Enum:        ie.Values,
 		Format:      "enum",
@@ -337,9 +337,9 @@ func (ie IntEnum) IsRequired() bool {
 	return ie.Required
 }
 
-func (se StringEnum) Schema() *genai.Schema {
-	return &genai.Schema{
-		Type:        genai.TypeString,
+func (se StringEnum) Schema() *WrapSchema {
+	return &WrapSchema{
+		Type:        string(genai.TypeString),
 		Description: se.Description,
 		Enum:        se.Values,
 		Format:      "enum",
@@ -362,9 +362,9 @@ type Int struct {
 	Nullable    NullableType
 }
 
-func (i Int) Schema() *genai.Schema {
-	return &genai.Schema{
-		Type:        genai.TypeInteger,
+func (i Int) Schema() *WrapSchema {
+	return &WrapSchema{
+		Type:        string(genai.TypeInteger),
 		Description: i.Description,
 		//Default:     i.Default,
 		Nullable: i.Nullable.Nullable(),
@@ -386,9 +386,9 @@ type Float struct {
 	Nullable    NullableType
 }
 
-func (f Float) Schema() *genai.Schema {
-	return &genai.Schema{
-		Type:        genai.TypeNumber,
+func (f Float) Schema() *WrapSchema {
+	return &WrapSchema{
+		Type:        string(genai.TypeNumber),
 		Description: f.Description,
 		//Default:     f.Default,
 		Nullable: f.Nullable.Nullable(),
@@ -410,9 +410,9 @@ type String struct {
 	Nullable    NullableType
 }
 
-func (s String) Schema() *genai.Schema {
-	return &genai.Schema{
-		Type:        genai.TypeString,
+func (s String) Schema() *WrapSchema {
+	return &WrapSchema{
+		Type:        string(genai.TypeString),
 		Description: s.Description,
 		//Default:     s.Default,
 		Nullable: s.Nullable.Nullable(),
@@ -434,9 +434,9 @@ type Bool struct {
 	Nullable    NullableType
 }
 
-func (b Bool) Schema() *genai.Schema {
-	return &genai.Schema{
-		Type:        genai.TypeBoolean,
+func (b Bool) Schema() *WrapSchema {
+	return &WrapSchema{
+		Type:        string(genai.TypeBoolean),
 		Description: b.Description,
 		//Default:     b.Default,
 		Nullable: b.Nullable.Nullable(),
