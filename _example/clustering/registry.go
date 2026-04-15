@@ -32,7 +32,7 @@ func main() {
 			polaris.WithClusterName("polaris-cluster"),
 			polaris.WithClusterHost("127.0.0.1"),
 			polaris.WithClusterPort(clusterPort),
-			polaris.WithClussterAdvertise(fmt.Sprintf("127.0.0.1:%d", port)),
+			polaris.WithClusterAdvertise(fmt.Sprintf("127.0.0.1:%d", clusterPort)),
 		),
 		polaris.WithRoutes(routes),
 	)

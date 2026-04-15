@@ -12,7 +12,7 @@ func main() {
 
 	session, err := polaris.Generate(
 		ctx,
-		polaris.UseModel("gemini-2.5-pro-preview-05-06"),
+		polaris.UseModel("gemini-3.1-pro-preview"),
 		polaris.UseTemperature(0.2),
 		polaris.UseJSONOutput(polaris.Object{
 			Description: "result of each",

@@ -249,7 +249,7 @@ func WithClusterPort(port int) RegistryClusterOption {
 	}
 }
 
-func WithClussterAdvertise(advertise string) RegistryClusterOption {
+func WithClusterAdvertise(advertise string) RegistryClusterOption {
 	return func(o *server.ClusterOpts) {
 		o.Advertise = advertise
 	}

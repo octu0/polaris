@@ -18,7 +18,7 @@ type Session interface {
 
 func createSession(ctx context.Context, tc toolConn, rc remoteCall, options ...UseOptionFunc) (Session, error) {
 	opt := &UseOption{
-		Model:           "gemini-2.5-pro-preview-03-25",
+		Model:           "gemini-3.1-pro-preview",
 		UseLocalTool:    false,
 		Temperature:     0.2,
 		TopP:            0.95,
@@ -100,9 +100,10 @@ func createSession(ctx context.Context, tc toolConn, rc remoteCall, options ...U
 		}
 	}
 
-	if 0 < opt.ThinkingBudget {
+	if 0 < opt.ThinkingBudget && "" != string(opt.ThinkingLevel) {
 		config.ThinkingConfig.IncludeThoughts = true
 		config.ThinkingConfig.ThinkingBudget = genai.Ptr(opt.ThinkingBudget)
+		config.ThinkingConfig.ThinkingLevel = opt.ThinkingLevel
 	}
 
 	chat, err := client.Chats.Create(ctx, opt.Model, config, nil)

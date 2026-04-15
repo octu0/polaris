@@ -64,7 +64,7 @@ For example, in the `getWeather` tool:
 myTool, _ := conn.Tool(toolName)
 gen, err := polaris.GenerateJSON(
     ctx,
-    polaris.UseModel("gemini-2.5-pro-exp-03-25"),
+    polaris.UseModel("gemini-3.1-pro-preview"),
     polaris.UseSystemInstruction(
         polaris.AddTextSystemInstruction("Output must be in Japanese."),
     ),
@@ -146,7 +146,7 @@ The `GenerateJSON` function is used to create an AI inference function that enfo
 ```go
 gen, err := polaris.GenerateJSON(
     ctx,
-    polaris.UseModel("gemini-2.5-pro-exp-03-25"),
+    polaris.UseModel("gemini-3.1-pro-preview"),
     polaris.UseSystemInstruction(
         polaris.AddTextSystemInstruction("Output must be in Japanese."),
     ),
