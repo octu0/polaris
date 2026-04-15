@@ -22,7 +22,7 @@ func main() {
 	ctx := context.TODO()
 	session, err := conn.Use(
 		ctx,
-		polaris.UseModel("gemini-2.5-pro-preview-05-06"),
+		polaris.UseModel("gemini-3.1-pro-preview"),
 		polaris.UseSystemInstruction(
 			polaris.AddTextSystemInstruction("Output must be in Japanese."),
 		),

@@ -22,7 +22,7 @@ func main() {
 	// Ensure your environment is configured for Vertex AI authentication
 	session, err := conn.Use(
 		ctx,
-		polaris.UseModel("gemini-2.5-pro-preview-05-06"),
+		polaris.UseModel("gemini-3.1-pro-preview"),
 		polaris.UseSystemInstruction(
 			polaris.AddTextSystemInstruction("You can interact with server logs using available tools."),
 		),

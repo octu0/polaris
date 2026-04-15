@@ -10,7 +10,7 @@ func Example_jsonOutput_promptInstruction() {
 
 	session, err := Generate(
 		ctx,
-		UseModel("gemini-2.5-pro-exp-03-25"),
+		UseModel("gemini-3.1-pro-preview"),
 		UseTemperature(0.2),
 		UseJSONOutput(nil),
 	)
@@ -54,7 +54,7 @@ func Example_jsonOutput_outputSchema() {
 
 	gen, err := GenerateJSON(
 		ctx,
-		UseModel("gemini-2.5-pro-exp-03-25"),
+		UseModel("gemini-3.1-pro-preview"),
 		UseTemperature(0.2),
 		UseJSONOutput(Object{
 			Description: "result of each",

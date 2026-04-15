@@ -30,7 +30,7 @@ The first approach (`outputschema.go`) uses `GenerateJSON` with `UseJSONOutput` 
 ```go
 gen, err := polaris.GenerateJSON(
     ctx,
-    polaris.UseModel("gemini-2.5-pro-exp-03-25"),
+    polaris.UseModel("gemini-3.1-pro-preview"),
     polaris.UseTemperature(0.2),
     polaris.UseJSONOutput(polaris.Object{
         Description: "result of each",
@@ -76,7 +76,7 @@ The second approach (`prompt.go`) uses `Generate` with prompt instructions to fo
 ```go
 session, err := polaris.Generate(
     ctx,
-    polaris.UseModel("gemini-2.5-pro-exp-03-25"),
+    polaris.UseModel("gemini-3.1-pro-preview"),
     polaris.UseTemperature(0.2),
     // Note: UseJSONOutput is still used here but works differently with Generate
 )
