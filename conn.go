@@ -119,6 +119,7 @@ type UseOption struct {
 	JSONOutput         bool
 	OutputSchema       TypeDef
 	ThinkingBudget     int32
+	ThinkingLevel      genai.ThinkingLevel
 	Logger             Logger
 	DebugMode          bool
 	DefaultArgsFunc    func() map[string]any
@@ -221,9 +222,10 @@ func UseDefaultArgs(fn func() map[string]any) UseOptionFunc {
 	}
 }
 
-func UseThinking(budget int32) UseOptionFunc {
+func UseThinking(budget int32, level genai.ThinkingLevel) UseOptionFunc {
 	return func(o *UseOption) {
 		o.ThinkingBudget = budget
+		o.ThinkingLevel = level
 	}
 }
 

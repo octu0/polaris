@@ -1,12 +1,12 @@
-go 1.23.7
+go 1.25.0
 
 use (
-    ./
-    ./_example/remote-log
-    ./_example/multi-tool
-    ./_example/json-schema
-    ./_example/agent-schema
-    ./_example/error-tool
-    ./_example/mcp-tool
-    ./_example/clustering
+	./
+	./_example/agent-schema
+	./_example/clustering
+	./_example/error-tool
+	./_example/json-schema
+	./_example/mcp-tool
+	./_example/multi-tool
+	./_example/remote-log
 )
