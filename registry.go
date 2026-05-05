@@ -48,6 +48,7 @@ type Registry struct {
 	ns     *server.Server
 	conn   *Conn
 	tools  map[string]*toolDeclareWithDeadline
+	opt    *RegistryOptions
 }
 
 func (r *Registry) Close() {
@@ -136,11 +137,15 @@ func (r *Registry) handleRegisterTool(declare WrapFunctionDeclaration) RespError
 	defer r.mutex.Unlock()
 
 	if _, ok := r.tools[declare.Name]; ok {
-		return RespError{false, fmt.Sprintf("register: %s already registered", declare.Name)}
+		if r.opt.AllowOverwrite {
+			log.Printf("INFO: tool %s overwritten", declare.Name)
+		} else {
+			return RespError{false, fmt.Sprintf("register: %s already registered", declare.Name)}
+		}
 	}
 	r.tools[declare.Name] = &toolDeclareWithDeadline{
 		Declare:  declare,
-		Deadline: time.Now().Add(time.Hour),
+		Deadline: time.Now().Add(r.opt.Deadline),
 	}
 	log.Printf("INFO: tool %s registered", declare.Name)
 	return RespError{true, "OK"}
@@ -173,11 +178,11 @@ func (r *Registry) handleToolKeepAlive(list []WrapFunctionDeclaration) RespError
 	for _, d := range list {
 		r.mutex.Lock()
 		if v, ok := r.tools[d.Name]; ok {
-			v.Deadline = time.Now().Add(time.Hour)
+			v.Deadline = time.Now().Add(r.opt.Deadline)
 		} else {
 			r.tools[d.Name] = &toolDeclareWithDeadline{
 				Declare:  d,
-				Deadline: time.Now().Add(time.Hour),
+				Deadline: time.Now().Add(r.opt.Deadline),
 			}
 		}
 		r.mutex.Unlock()
@@ -185,7 +190,7 @@ func (r *Registry) handleToolKeepAlive(list []WrapFunctionDeclaration) RespError
 	return RespError{true, "OK"}
 }
 
-func newRegistry(ns *server.Server, conn *Conn) *Registry {
+func newRegistry(ns *server.Server, conn *Conn, opt *RegistryOptions) *Registry {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Registry{
 		ctx:    ctx,
@@ -194,40 +199,47 @@ func newRegistry(ns *server.Server, conn *Conn) *Registry {
 		ns:     ns,
 		conn:   conn,
 		tools:  make(map[string]*toolDeclareWithDeadline, 0),
+		opt:    opt,
 	}
 }
 
 type (
-	RegistryOption        func(*server.Options)
+	RegistryOption        func(*RegistryOptions)
 	RegistryClusterOption func(*server.ClusterOpts)
 )
 
+type RegistryOptions struct {
+	Server         *server.Options
+	Deadline       time.Duration
+	AllowOverwrite bool
+}
+
 func WithBind(host string, port int) RegistryOption {
-	return func(o *server.Options) {
-		o.Host = host
-		o.Port = port
+	return func(o *RegistryOptions) {
+		o.Server.Host = host
+		o.Server.Port = port
 	}
 }
 
 func WithMaxPayload(size int32) RegistryOption {
-	return func(o *server.Options) {
-		o.MaxPayload = size
+	return func(o *RegistryOptions) {
+		o.Server.MaxPayload = size
 	}
 }
 
 func WithRoutes(routesStr string) RegistryOption {
-	return func(o *server.Options) {
-		o.Routes = server.RoutesFromStr(routesStr)
+	return func(o *RegistryOptions) {
+		o.Server.Routes = server.RoutesFromStr(routesStr)
 	}
 }
 
 func WithClusterOption(opts ...RegistryClusterOption) RegistryOption {
-	return func(o *server.Options) {
+	return func(o *RegistryOptions) {
 		opt := server.ClusterOpts{}
 		for _, fn := range opts {
 			fn(&opt)
 		}
-		o.Cluster = opt
+		o.Server.Cluster = opt
 	}
 }
 
@@ -255,25 +267,41 @@ func WithClusterAdvertise(advertise string) RegistryClusterOption {
 	}
 }
 
+func WithKeepaliveDeadline(d time.Duration) RegistryOption {
+	return func(o *RegistryOptions) {
+		o.Deadline = d
+	}
+}
+
+func WithAllowToolOverwrite(allow bool) RegistryOption {
+	return func(o *RegistryOptions) {
+		o.AllowOverwrite = allow
+	}
+}
+
 func CreateRegistry(opts ...RegistryOption) (*Registry, error) {
-	o := &server.Options{
-		Debug:  false,
-		NoSigs: true,
-		NoLog:  true,
+	o := &RegistryOptions{
+		Server: &server.Options{
+			Debug:  false,
+			NoSigs: true,
+			NoLog:  true,
+		},
+		Deadline:       10 * time.Minute,
+		AllowOverwrite: false,
 	}
 	for _, fn := range opts {
 		fn(o)
 	}
-	if o.Cluster.PoolSize < 1 {
-		o.Cluster.PoolSize = -1
+	if o.Server.Cluster.PoolSize < 1 {
+		o.Server.Cluster.PoolSize = -1
 	}
 
-	ns := server.New(o)
+	ns := server.New(o.Server)
 	ns.DisableJetStream()
 	go ns.Start()
 
 	waitRouting := make(chan struct{})
-	if 0 < len(o.Routes) {
+	if 0 < len(o.Server.Routes) {
 		go ns.StartRouting(waitRouting)
 	}
 
@@ -290,7 +318,7 @@ func CreateRegistry(opts ...RegistryOption) (*Registry, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	r := newRegistry(ns, conn)
+	r := newRegistry(ns, conn, o)
 	if err := r.subscribeTool(); err != nil {
 		return nil, errors.WithStack(err)
 	}
