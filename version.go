@@ -2,5 +2,5 @@ package polaris
 
 const (
 	AppName string = "polaris"
-	Version string = "1.4.1"
+	Version string = "1.5.0"
 )
