@@ -205,7 +205,7 @@ func (s *LiveSession) handleMsg(genContentResp *genai.GenerateContentResponse) i
 				if r.err != nil {
 					s.logger.Errorf("%+v", r.err)
 					funcResults[r.index] = genai.NewPartFromFunctionResponse(r.name, map[string]any{
-						"error": fmt.Sprintf("%+v", r.err),
+						"_error": fmt.Sprintf("%+v", r.err),
 					})
 					continue
 				}
