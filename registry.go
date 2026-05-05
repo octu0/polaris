@@ -38,7 +38,7 @@ func (e RespError) Err() error {
 	if e.Success {
 		return nil
 	}
-	return errors.Errorf(e.Msg)
+	return errors.Errorf("resp error:%s", e.Msg)
 }
 
 type Registry struct {

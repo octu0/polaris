@@ -40,7 +40,7 @@ func createSession(ctx context.Context, tc toolConn, rc remoteCall, options ...U
 		rc.setDefaultArgsFunc(opt.DefaultArgsFunc)
 	}
 
-	remoteTools, err := tc.listTools(opt.UseLocalTool)
+	remoteTools, err := tc.listTools(opt.Namespace, opt.UseLocalTool)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -115,7 +115,7 @@ func createSession(ctx context.Context, tc toolConn, rc remoteCall, options ...U
 }
 
 type toolConn interface {
-	listTools(bool) ([]genai.FunctionDeclaration, error)
+	listTools(string, bool) ([]genai.FunctionDeclaration, error)
 }
 
 var (
@@ -124,7 +124,7 @@ var (
 
 type noToolConn struct{}
 
-func (*noToolConn) listTools(bool) ([]genai.FunctionDeclaration, error) {
+func (*noToolConn) listTools(string, bool) ([]genai.FunctionDeclaration, error) {
 	return nil, nil
 }
 
@@ -172,7 +172,7 @@ func (s *LiveSession) handleMsg(genContentResp *genai.GenerateContentResponse) i
 				go func(i int, funcall *genai.FunctionCall) {
 					defer wg.Done()
 
-					r, err := s.rc.callFunction(funcall.Name, funcall.Args)
+					r, err := s.rc.callFunction(s.opt.Namespace, funcall.Name, funcall.Args)
 					if err != nil {
 						err = errors.Wrapf(err, "name=%s, args=%v", funcall.Name, funcall.Args)
 					}

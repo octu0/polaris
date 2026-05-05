@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log"
+	"strings"
 
 	"github.com/mark3labs/mcp-go/client"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -59,7 +60,7 @@ func handleMCPToolCall(ctx context.Context, client *client.Client, t Tool) func(
 type remoteCall interface {
 	setLogger(Logger)
 	setDefaultArgsFunc(func() map[string]any)
-	callFunction(string, map[string]any) (map[string]any, error)
+	callFunction(string, string, map[string]any) (map[string]any, error)
 }
 
 var (
@@ -73,8 +74,8 @@ func (*panicRemoteCall) setLogger(Logger) {}
 
 func (*panicRemoteCall) setDefaultArgsFunc(func() map[string]any) {}
 
-func (*panicRemoteCall) callFunction(name string, args map[string]any) (map[string]any, error) {
-	panic(errors.Errorf("not support callFunction: called func=%s args=%v", name, args))
+func (*panicRemoteCall) callFunction(namespace, name string, args map[string]any) (map[string]any, error) {
+	panic(errors.Errorf("not support callFunction: called namespace=%s func=%s args=%v", namespace, name, args))
 }
 
 type defaultRemoteCall struct {
@@ -91,7 +92,7 @@ func (d *defaultRemoteCall) setDefaultArgsFunc(fn func() map[string]any) {
 	d.defaultArgsFunc = fn
 }
 
-func (d *defaultRemoteCall) callFunction(name string, args map[string]any) (map[string]any, error) {
+func (d *defaultRemoteCall) callFunction(namespace, name string, args map[string]any) (map[string]any, error) {
 	if d.logger == nil {
 		d.logger = &stdLogger{log.New(io.Discard, "", 0), false}
 	}
@@ -104,10 +105,15 @@ func (d *defaultRemoteCall) callFunction(name string, args map[string]any) (map[
 		}
 	}
 
-	d.logger.Debugf("callFunction: %s args=%v", name, args)
+	actualName := name
+	if namespace != "" {
+		actualName = strings.Join([]string{namespace, name}, "@")
+	}
+
+	d.logger.Debugf("callFunction: %s args=%v", actualName, args)
 	resp, err := requestWithData(
 		d.conn,
-		tooltopic(name),
+		tooltopic(actualName),
 		JSONEncoder[map[string]any](),
 		JSONEncoder[map[string]any](),
 		args,

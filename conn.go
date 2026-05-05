@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/mark3labs/mcp-go/client"
@@ -31,6 +32,7 @@ type ConnectOption struct {
 	MaxReconnects  int
 	ReconnectWait  time.Duration
 	ReqTimeout     time.Duration
+	Namespace      string
 }
 
 func NatsURL(url ...string) ConnectOptionFunc {
@@ -107,6 +109,12 @@ func RequestTimeout(timeout time.Duration) ConnectOptionFunc {
 	}
 }
 
+func ConnectNamespace(ns string) ConnectOptionFunc {
+	return func(o *ConnectOption) {
+		o.Namespace = ns
+	}
+}
+
 type UseOptionFunc func(*UseOption)
 
 type UseOption struct {
@@ -123,6 +131,7 @@ type UseOption struct {
 	Logger             Logger
 	DebugMode          bool
 	DefaultArgsFunc    func() map[string]any
+	Namespace          string
 }
 
 func UseModel(name string) UseOptionFunc {
@@ -134,6 +143,12 @@ func UseModel(name string) UseOptionFunc {
 func UseLocalTool(enable bool) UseOptionFunc {
 	return func(o *UseOption) {
 		o.UseLocalTool = enable
+	}
+}
+
+func UseNamespace(ns string) UseOptionFunc {
+	return func(o *UseOption) {
+		o.Namespace = ns
 	}
 }
 
@@ -401,7 +416,7 @@ func (c *Conn) Tool(name string) (Tool, bool) {
 	return Tool{}, false
 }
 
-func (c *Conn) listTools(useLocalTool bool) ([]genai.FunctionDeclaration, error) {
+func (c *Conn) listTools(namespace string, useLocalTool bool) ([]genai.FunctionDeclaration, error) {
 	remoteList, err := request(
 		c,
 		TopicListTool,
@@ -418,9 +433,25 @@ func (c *Conn) listTools(useLocalTool bool) ([]genai.FunctionDeclaration, error)
 				continue
 			}
 		}
-		declares = append(declares, d.ToGenAI())
+		if namespace == "" {
+			if strings.Contains(d.Name, "@") {
+				continue
+			}
+			declares = append(declares, d.ToGenAI())
+		} else {
+			prefix := namespace + "@"
+			if strings.HasPrefix(d.Name, prefix) {
+				genaiDecl := d.ToGenAI()
+				genaiDecl.Name = strings.TrimPrefix(d.Name, prefix)
+				declares = append(declares, genaiDecl)
+			}
+		}
 	}
 	return declares, nil
+}
+
+func (c *Conn) GetNamespaceTools(namespace string) ([]genai.FunctionDeclaration, error) {
+	return c.listTools(namespace, true)
 }
 
 func (c *Conn) Use(ctx context.Context, options ...UseOptionFunc) (Session, error) {
@@ -435,7 +466,7 @@ func (c *Conn) Call(ctx context.Context, name string, req Req) (Resp, error) {
 	}
 
 	rc := &defaultRemoteCall{c, nil, nil}
-	ret, err := rc.callFunction(name, req.ToMap())
+	ret, err := rc.callFunction(c.opt.Namespace, name, req.ToMap())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
