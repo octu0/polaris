@@ -2,6 +2,7 @@ package polaris
 
 import (
 	"context"
+	"fmt"
 	"iter"
 	"log"
 	"os"
@@ -164,42 +165,49 @@ func (s *LiveSession) handleMsg(genContentResp *genai.GenerateContentResponse) i
 	return func(yield func(string, error) bool) {
 		generate := func(resp *genai.GenerateContentResponse) (*genai.GenerateContentResponse, error) {
 			funcalls := resp.FunctionCalls()
-			wg := new(sync.WaitGroup)
 			ret := make(chan funcallCtx, len(funcalls))
+			if 0 < len(funcalls) {
+				wg := new(sync.WaitGroup)
 
-			for i, fc := range funcalls {
-				wg.Add(1)
-				go func(i int, funcall *genai.FunctionCall) {
-					defer wg.Done()
+				for i, fc := range funcalls {
+					wg.Add(1)
+					go func(i int, funcall *genai.FunctionCall) {
+						defer wg.Done()
 
-					r, err := s.rc.callFunction(s.opt.Namespace, funcall.Name, funcall.Args)
-					if err != nil {
-						err = errors.Wrapf(err, "name=%s, args=%v", funcall.Name, funcall.Args)
-					}
-					ret <- funcallCtx{
-						i,
-						funcall.Name,
-						r,
-						err,
-					}
-				}(i, fc)
+						r, err := s.rc.callFunction(s.opt.Namespace, funcall.Name, funcall.Args)
+						if err != nil {
+							err = errors.Wrapf(err, "name=%s, args=%v", funcall.Name, funcall.Args)
+						}
+						ret <- funcallCtx{
+							i,
+							funcall.Name,
+							r,
+							err,
+						}
+					}(i, fc)
+				}
+				wg.Wait()
 			}
-			wg.Wait()
-			close(ret)
 
-			for _, p := range resp.Candidates[0].Content.Parts {
-				if p.Text != "" {
-					if yield(p.Text, nil) != true {
-						return endContent(), nil
+			if resp.Candidates[0].Content != nil {
+				for _, p := range resp.Candidates[0].Content.Parts {
+					if p.Text != "" {
+						if yield(p.Text, nil) != true {
+							return endContent(), nil
+						}
 					}
 				}
 			}
 
 			funcResults := make([]*genai.Part, len(funcalls))
+			close(ret)
 			for r := range ret {
 				if r.err != nil {
-					yield("", errors.WithStack(r.err))
-					return nil, errors.WithStack(r.err)
+					s.logger.Errorf("%+v", r.err)
+					funcResults[r.index] = genai.NewPartFromFunctionResponse(r.name, map[string]any{
+						"error": fmt.Sprintf("%+v", r.err),
+					})
+					continue
 				}
 				funcResults[r.index] = genai.NewPartFromFunctionResponse(r.name, r.resp)
 			}
@@ -222,7 +230,13 @@ func (s *LiveSession) handleMsg(genContentResp *genai.GenerateContentResponse) i
 			return
 		}
 		for {
-			s.logger.Debugf("finish reasion: %s", resp.Candidates[0].FinishReason)
+			s.logger.Debugf("finish reason(resp): %s", resp.Candidates[0].FinishReason)
+			if resp.Candidates[0].FinishReason == genai.FinishReasonMaxTokens {
+				err := errors.Errorf("max token: %s", resp.Candidates[0].FinishMessage)
+				s.logger.Warnf("%+v", err)
+				yield("", err)
+				return
+			}
 			if resp.Candidates[0].FinishReason == genai.FinishReasonMalformedFunctionCall {
 				err := errors.Errorf("malformed function call: %s", resp.Candidates[0].FinishMessage)
 				s.logger.Warnf("%+v", err)
@@ -230,12 +244,13 @@ func (s *LiveSession) handleMsg(genContentResp *genai.GenerateContentResponse) i
 				return
 			}
 
-			if resp.UsageMetadata == nil {
-				return
-			}
 			r, err := generate(resp)
 			if err != nil {
 				s.logger.Warnf("%+v", err)
+				return
+			}
+			s.logger.Debugf("finish reason(r): %s", resp.Candidates[0].FinishReason)
+			if r.Candidates[0].FinishReason == genai.FinishReasonStop {
 				return
 			}
 			resp = r
