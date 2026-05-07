@@ -428,6 +428,49 @@ func (c *Conn) hasTool(nsName string) bool {
 	return false
 }
 
+func (c *Conn) Tools() ([]genai.FunctionDeclaration, error) {
+	remoteList, err := request(
+		c,
+		TopicListTool,
+		JSONEncoder[[]WrapFunctionDeclaration](),
+	)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	declares := make([]genai.FunctionDeclaration, 0, len(remoteList))
+	for _, d := range remoteList {
+		if strings.Contains(d.Name, NamespaceSeparator) {
+			continue
+		}
+		declares = append(declares, d.ToGenAI())
+	}
+	return declares, nil
+}
+
+func (c *Conn) NamespaceTools(namespace string) ([]genai.FunctionDeclaration, error) {
+	remoteList, err := request(
+		c,
+		TopicListTool,
+		JSONEncoder[[]WrapFunctionDeclaration](),
+	)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	prefix := namespaceize(namespace, "")
+	declares := make([]genai.FunctionDeclaration, 0, len(remoteList))
+	for _, d := range remoteList {
+		if strings.HasPrefix(d.Name, prefix) != true {
+			continue
+		}
+		genaiDecl := d.ToGenAI()
+		genaiDecl.Name = strings.TrimPrefix(d.Name, prefix)
+		declares = append(declares, genaiDecl)
+	}
+	return declares, nil
+}
+
 func (c *Conn) listTools(overrideNamespace string, useLocalTool bool) ([]genai.FunctionDeclaration, error) {
 	remoteList, err := request(
 		c,
