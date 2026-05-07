@@ -18,6 +18,7 @@ func main() {
 		polaris.AllowReconnect(true),
 		polaris.MaxReconnects(-1),
 		polaris.ReconnectWait(5*time.Second),
+		polaris.ConnectNamespace("web"),
 	)
 	if err != nil {
 		panic(err)
@@ -25,7 +26,7 @@ func main() {
 	defer conn.Close()
 
 	if err := conn.RegisterTool(polaris.Tool{
-		Name:        "web@httpd_log",
+		Name:        "httpd_log",
 		Description: "get httpd access log",
 		Parameters: polaris.Object{
 			Properties: polaris.Properties{

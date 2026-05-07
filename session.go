@@ -41,6 +41,10 @@ func createSession(ctx context.Context, tc toolConn, rc remoteCall, options ...U
 		rc.setDefaultArgsFunc(opt.DefaultArgsFunc)
 	}
 
+	if 0 < len(opt.Namespace) {
+		rc.setNamespace(opt.Namespace)
+	}
+
 	remoteTools, err := tc.listTools(opt.Namespace, opt.UseLocalTool)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -174,7 +178,7 @@ func (s *LiveSession) handleMsg(genContentResp *genai.GenerateContentResponse) i
 					go func(i int, funcall *genai.FunctionCall) {
 						defer wg.Done()
 
-						r, err := s.rc.callFunction(s.opt.Namespace, funcall.Name, funcall.Args)
+						r, err := s.rc.callFunction(funcall.Name, funcall.Args)
 						if err != nil {
 							err = errors.Wrapf(err, "name=%s, args=%v", funcall.Name, funcall.Args)
 						}
@@ -230,6 +234,13 @@ func (s *LiveSession) handleMsg(genContentResp *genai.GenerateContentResponse) i
 			return
 		}
 		for {
+			s.logger.Debugf("finish reasion: %s", resp.Candidates[0].FinishReason)
+			if resp.Candidates[0].FinishReason == genai.FinishReasonMalformedFunctionCall {
+				err := errors.Errorf("malformed function call: %s", resp.Candidates[0].FinishMessage)
+				s.logger.Warnf("%+v", err)
+				yield("", err)
+				return
+			}
 			s.logger.Debugf("finish reason(resp): %s", resp.Candidates[0].FinishReason)
 			if resp.Candidates[0].FinishReason == genai.FinishReasonMaxTokens {
 				err := errors.Errorf("max token: %s", resp.Candidates[0].FinishMessage)
@@ -237,20 +248,19 @@ func (s *LiveSession) handleMsg(genContentResp *genai.GenerateContentResponse) i
 				yield("", err)
 				return
 			}
-			if resp.Candidates[0].FinishReason == genai.FinishReasonMalformedFunctionCall {
-				err := errors.Errorf("malformed function call: %s", resp.Candidates[0].FinishMessage)
-				s.logger.Warnf("%+v", err)
-				yield("", err)
+
+			if resp.Candidates[0].FinishReason == genai.FinishReasonStop {
+				if resp.Candidates[0].Content == nil {
+					return
+				}
+			}
+			if resp.UsageMetadata == nil || resp.ResponseID == "" {
 				return
 			}
 
 			r, err := generate(resp)
 			if err != nil {
 				s.logger.Warnf("%+v", err)
-				return
-			}
-			s.logger.Debugf("finish reason(r): %s", resp.Candidates[0].FinishReason)
-			if r.Candidates[0].FinishReason == genai.FinishReasonStop {
 				return
 			}
 			resp = r

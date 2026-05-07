@@ -146,9 +146,9 @@ func UseLocalTool(enable bool) UseOptionFunc {
 	}
 }
 
-func UseNamespace(ns string) UseOptionFunc {
+func UseNamespace(namespace string) UseOptionFunc {
 	return func(o *UseOption) {
-		o.Namespace = ns
+		o.Namespace = namespace
 	}
 }
 
@@ -380,6 +380,8 @@ func (c *Conn) UnregisterTools() error {
 }
 
 func (c *Conn) RegisterTool(t Tool) error {
+	// override
+	t.Name = namespaceize(c.opt.Namespace, t.Name)
 	if err := subscribeReqResp(
 		c,
 		tooltopic(t.Name),
@@ -408,15 +410,25 @@ func (c *Conn) RegisterTool(t Tool) error {
 }
 
 func (c *Conn) Tool(name string) (Tool, bool) {
+	nsName := namespaceize(c.opt.Namespace, name)
 	for _, t := range c.tools {
-		if t.Name == name {
+		if t.Name == nsName {
 			return t, true
 		}
 	}
 	return Tool{}, false
 }
 
-func (c *Conn) listTools(namespace string, useLocalTool bool) ([]genai.FunctionDeclaration, error) {
+func (c *Conn) hasTool(nsName string) bool {
+	for _, t := range c.tools {
+		if t.Name == nsName {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *Conn) listTools(overrideNamespace string, useLocalTool bool) ([]genai.FunctionDeclaration, error) {
 	remoteList, err := request(
 		c,
 		TopicListTool,
@@ -426,36 +438,40 @@ func (c *Conn) listTools(namespace string, useLocalTool bool) ([]genai.FunctionD
 		return nil, errors.WithStack(err)
 	}
 
+	prefix := ""
+	if 0 < len(c.opt.Namespace) {
+		prefix = namespaceize(c.opt.Namespace, "")
+	}
+	if 0 < len(overrideNamespace) {
+		prefix = namespaceize(overrideNamespace, "")
+	}
+
 	declares := make([]genai.FunctionDeclaration, 0, len(remoteList))
 	for _, d := range remoteList {
-		if _, ok := c.Tool(d.Name); ok {
+		if c.hasTool(d.Name) {
 			if useLocalTool != true {
 				continue
 			}
 		}
-		if namespace == "" {
-			if strings.Contains(d.Name, "@") {
+		if 0 < len(prefix) {
+			if strings.HasPrefix(d.Name, prefix) != true {
+				continue
+			}
+			genaiDecl := d.ToGenAI()
+			genaiDecl.Name = strings.TrimPrefix(d.Name, prefix)
+			declares = append(declares, genaiDecl)
+		} else {
+			if strings.Contains(d.Name, NamespaceSeparator) {
 				continue
 			}
 			declares = append(declares, d.ToGenAI())
-		} else {
-			prefix := namespace + "@"
-			if strings.HasPrefix(d.Name, prefix) {
-				genaiDecl := d.ToGenAI()
-				genaiDecl.Name = strings.TrimPrefix(d.Name, prefix)
-				declares = append(declares, genaiDecl)
-			}
 		}
 	}
 	return declares, nil
 }
 
-func (c *Conn) GetNamespaceTools(namespace string) ([]genai.FunctionDeclaration, error) {
-	return c.listTools(namespace, true)
-}
-
 func (c *Conn) Use(ctx context.Context, options ...UseOptionFunc) (Session, error) {
-	rc := &defaultRemoteCall{c, nil, nil}
+	rc := newDefaultRemoteCall(c)
 	return createSession(ctx, c, rc, options...)
 }
 
@@ -465,8 +481,8 @@ func (c *Conn) Call(ctx context.Context, name string, req Req) (Resp, error) {
 		return Resp(ret), nil
 	}
 
-	rc := &defaultRemoteCall{c, nil, nil}
-	ret, err := rc.callFunction(c.opt.Namespace, name, req.ToMap())
+	rc := newDefaultRemoteCall(c)
+	ret, err := rc.callFunction(name, req.ToMap())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -535,6 +551,17 @@ func newConn(natsOpt nats.Options, opt *ConnectOption, nc *nats.Conn) *Conn {
 
 func tooltopic(name string) string {
 	return fmt.Sprintf("polaris:user-func:%s", name)
+}
+
+const (
+	NamespaceSeparator string = "@"
+)
+
+func namespaceize(namespace, toolname string) string {
+	if 0 < len(namespace) {
+		return strings.Join([]string{namespace, toolname}, NamespaceSeparator)
+	}
+	return toolname
 }
 
 func request[Resp any](c *Conn, topic string, encResp Encoder[Resp]) (Resp, error) {

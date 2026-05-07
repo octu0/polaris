@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 	"log"
-	"strings"
 
 	"github.com/mark3labs/mcp-go/client"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -60,7 +59,8 @@ func handleMCPToolCall(ctx context.Context, client *client.Client, t Tool) func(
 type remoteCall interface {
 	setLogger(Logger)
 	setDefaultArgsFunc(func() map[string]any)
-	callFunction(string, string, map[string]any) (map[string]any, error)
+	setNamespace(string)
+	callFunction(string, map[string]any) (map[string]any, error)
 }
 
 var (
@@ -74,14 +74,17 @@ func (*panicRemoteCall) setLogger(Logger) {}
 
 func (*panicRemoteCall) setDefaultArgsFunc(func() map[string]any) {}
 
-func (*panicRemoteCall) callFunction(namespace, name string, args map[string]any) (map[string]any, error) {
-	panic(errors.Errorf("not support callFunction: called namespace=%s func=%s args=%v", namespace, name, args))
+func (*panicRemoteCall) setNamespace(string) {}
+
+func (*panicRemoteCall) callFunction(name string, args map[string]any) (map[string]any, error) {
+	panic(errors.Errorf("not support callFunction: called func=%s args=%v", name, args))
 }
 
 type defaultRemoteCall struct {
 	conn            *Conn
 	logger          Logger
 	defaultArgsFunc func() map[string]any
+	namespace       string
 }
 
 func (d *defaultRemoteCall) setLogger(lg Logger) {
@@ -92,7 +95,11 @@ func (d *defaultRemoteCall) setDefaultArgsFunc(fn func() map[string]any) {
 	d.defaultArgsFunc = fn
 }
 
-func (d *defaultRemoteCall) callFunction(namespace, name string, args map[string]any) (map[string]any, error) {
+func (d *defaultRemoteCall) setNamespace(ns string) {
+	d.namespace = ns
+}
+
+func (d *defaultRemoteCall) callFunction(toolname string, args map[string]any) (map[string]any, error) {
 	if d.logger == nil {
 		d.logger = &stdLogger{log.New(io.Discard, "", 0), false}
 	}
@@ -105,15 +112,11 @@ func (d *defaultRemoteCall) callFunction(namespace, name string, args map[string
 		}
 	}
 
-	actualName := name
-	if namespace != "" {
-		actualName = strings.Join([]string{namespace, name}, "@")
-	}
-
-	d.logger.Debugf("callFunction: %s args=%v", actualName, args)
+	nsName := namespaceize(d.namespace, toolname)
+	d.logger.Debugf("callFunction: %s args=%v", nsName, args)
 	resp, err := requestWithData(
 		d.conn,
-		tooltopic(actualName),
+		tooltopic(nsName),
 		JSONEncoder[map[string]any](),
 		JSONEncoder[map[string]any](),
 		args,
@@ -122,7 +125,14 @@ func (d *defaultRemoteCall) callFunction(namespace, name string, args map[string
 		return nil, errors.WithStack(err)
 	}
 	if err, ok := resp["_error"]; ok {
-		d.logger.Warnf("error in %s err:%s", name, err)
+		d.logger.Warnf("error in %s err:%+v", nsName, err)
 	}
 	return resp, nil
+}
+
+func newDefaultRemoteCall(conn *Conn) *defaultRemoteCall {
+	return &defaultRemoteCall{
+		conn:      conn,
+		namespace: conn.opt.Namespace,
+	}
 }

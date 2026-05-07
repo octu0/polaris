@@ -31,7 +31,7 @@ func (c *Conn) RegisterSSEMCPTools(baseURL string, initReq mcp.InitializeRequest
 	tools := make([]Tool, 0)
 	for _, t := range r.Tools {
 		tools = append(tools, Tool{
-			Name:        t.Name,
+			Name:        namespaceize(c.opt.Namespace, t.Name),
 			Description: t.Description,
 			Parameters:  convertInputSchema(t.InputSchema),
 			Response:    Object{},
